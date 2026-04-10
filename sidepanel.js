@@ -141,6 +141,9 @@ function switchTab(tab) {
 function setupAddressBar() {
   if (!dom.addressInput) return;
 
+  // 初期表示
+  updateAddressBar();
+
   dom.addressInput.addEventListener('keydown', async (e) => {
     if (e.key === 'Enter') {
       const query = dom.addressInput.value.trim();
@@ -162,13 +165,30 @@ function setupAddressBar() {
         } else {
           await chrome.tabs.create({ url: targetUrl });
         }
-        dom.addressInput.value = '';
         dom.addressInput.blur();
       } catch (error) {
         console.error('ナビゲーションエラー:', error);
       }
     }
   });
+
+  // フォーカス時に全選択（使いやすさのため）
+  dom.addressInput.addEventListener('focus', () => {
+    dom.addressInput.select();
+  });
+}
+
+async function updateAddressBar() {
+  if (!dom.addressInput || document.activeElement === dom.addressInput) return;
+
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab && tab.url) {
+      dom.addressInput.value = tab.url;
+    }
+  } catch (error) {
+    console.error('アドレスバー更新エラー:', error);
+  }
 }
 
 // ===========================
@@ -198,6 +218,11 @@ function setupTabListeners() {
       state.tabs[index] = tab;
       renderTabs();
     }
+    
+    // 現在のタブのURLが更新されたらアドレスバーも更新
+    if (tab.active && changeInfo.url) {
+      updateAddressBar();
+    }
   });
 
   // タブの削除
@@ -212,6 +237,7 @@ function setupTabListeners() {
       t.active = t.id === activeInfo.tabId;
     });
     renderTabs();
+    updateAddressBar(); // アドレスバーを更新
   });
 
   // タブの移動
