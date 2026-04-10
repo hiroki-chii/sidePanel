@@ -31,6 +31,15 @@
         "content.js"
       ],
       "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "*://www.youtube.com/*"
+      ],
+      "js": [
+        "content-youtube.js"
+      ],
+      "run_at": "document_start"
     }
   ]
 }

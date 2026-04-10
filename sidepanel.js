@@ -2,6 +2,9 @@
  * サイドパネル - タブ&ブックマーク管理
  */
 
+// サイドパネルの開閉状態をbackgroundに通知（接続/切断で検知）
+const _sidePanelPort = chrome.runtime.connect({ name: 'sidepanel' });
+
 // ===========================
 // 状態管理
 // ===========================
