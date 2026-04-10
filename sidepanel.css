@@ -256,6 +256,46 @@ body {
   color: var(--text-muted);
 }
 
+.address-bar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.address-bar-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.address-bar-btn:active {
+  background: var(--bg-active);
+  transform: scale(0.92);
+}
+
+.address-bar-btn .star-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  transition: all var(--transition-base);
+}
+
+.address-bar-btn.is-bookmarked {
+  color: var(--warning);
+}
+
+.address-bar-btn.is-bookmarked .star-icon {
+  fill: var(--warning);
+}
+
 .clear-btn {
   display: flex;
   align-items: center;

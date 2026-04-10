@@ -28,6 +28,7 @@ const dom = {
   bookmarksList: document.getElementById('bookmarksList'),
   tabsEmpty: document.getElementById('tabsEmpty'),
   bookmarksEmpty: document.getElementById('bookmarksEmpty'),
+  bookmarkPageBtn: document.getElementById('bookmarkPageBtn'),
 };
 
 // ===========================
@@ -37,11 +38,13 @@ document.addEventListener('DOMContentLoaded', () => {
   setupNavigation();
   setupTabNavigation();
   setupAddressBar();
+  setupBookmarkAction();
   setupContextMenu();
   setupNewTabAction();
   loadTabs();
   loadBookmarks();
   setupTabListeners();
+  setupBookmarkListeners();
   loadToolsSettings();
 });
 
@@ -153,7 +156,7 @@ function setupAddressBar() {
       if (!query) return;
 
       let targetUrl = query;
-      if (!/^https?:\/\//i.test(query)) {
+      if (!/^(https?|chrome|edge|about|file|view-source):/i.test(query)) {
         if (query.includes('.') && !query.includes(' ')) {
           targetUrl = 'https://' + query;
         } else {
@@ -171,6 +174,11 @@ function setupAddressBar() {
         dom.addressInput.blur();
       } catch (error) {
         console.error('ナビゲーションエラー:', error);
+        if (targetUrl.startsWith('chrome://')) {
+          showToast('セキュリティ制限により chrome:// ページへの自動遷移は制限されています');
+        } else {
+          showToast('ページを開けませんでした');
+        }
       }
     }
   });
@@ -181,6 +189,60 @@ function setupAddressBar() {
   });
 }
 
+function setupBookmarkAction() {
+  if (!dom.bookmarkPageBtn) return;
+
+  dom.bookmarkPageBtn.addEventListener('click', async () => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab || !tab.url) return;
+
+    try {
+      // 既存のブックマークを検索
+      const bookmarks = await chrome.bookmarks.search({ url: tab.url });
+
+      if (bookmarks.length > 0) {
+        // 既に存在する場合は削除
+        await chrome.bookmarks.remove(bookmarks[0].id);
+        showToast('ブックマークから削除しました');
+      } else {
+        // 存在しない場合は追加（「その他のブックマーク」等に追加される）
+        await chrome.bookmarks.create({
+          title: tab.title,
+          url: tab.url,
+        });
+        showToast('ブックマークに追加しました');
+      }
+      // UIを更新
+      updateBookmarkButton(tab.url);
+      loadBookmarks();
+    } catch (error) {
+      console.error('ブックマーク操作エラー:', error);
+    }
+  });
+}
+
+async function updateBookmarkButton(url) {
+  if (!dom.bookmarkPageBtn) return;
+
+  if (!url || url.startsWith('chrome:') || url.startsWith('chrome-extension:')) {
+    dom.bookmarkPageBtn.classList.remove('is-bookmarked');
+    dom.bookmarkPageBtn.title = '現在のページはブックマークできません';
+    dom.bookmarkPageBtn.disabled = true;
+    return;
+  }
+
+  dom.bookmarkPageBtn.disabled = false;
+  try {
+    const bookmarks = await chrome.bookmarks.search({ url });
+    const isBookmarked = bookmarks.length > 0;
+
+    dom.bookmarkPageBtn.classList.toggle('is-bookmarked', isBookmarked);
+    dom.bookmarkPageBtn.title = isBookmarked ? 'ブックマークを削除' : 'ブックマークに追加';
+  } catch (error) {
+    console.error('ブックマーク検索エラー:', error);
+  }
+}
+
 async function updateAddressBar() {
   if (!dom.addressInput || document.activeElement === dom.addressInput) return;
 
@@ -188,6 +250,7 @@ async function updateAddressBar() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab && tab.url) {
       dom.addressInput.value = tab.url;
+      updateBookmarkButton(tab.url);
     }
   } catch (error) {
     console.error('アドレスバー更新エラー:', error);
@@ -251,6 +314,27 @@ function setupTabListeners() {
   // タブの着脱
   chrome.tabs.onDetached.addListener(() => loadTabs());
   chrome.tabs.onAttached.addListener(() => loadTabs());
+}
+
+function setupBookmarkListeners() {
+  // ブックマークの変動を監視してボタンとリストを更新
+  chrome.bookmarks.onCreated.addListener(() => {
+    refreshBookmarkUI();
+  });
+  chrome.bookmarks.onRemoved.addListener(() => {
+    refreshBookmarkUI();
+  });
+  chrome.bookmarks.onChanged.addListener(() => {
+    refreshBookmarkUI();
+  });
+}
+
+async function refreshBookmarkUI() {
+  loadBookmarks();
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tab && tab.url) {
+    updateBookmarkButton(tab.url);
+  }
 }
 
 function renderTabs() {
