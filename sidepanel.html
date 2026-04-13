@@ -133,6 +133,47 @@
           </label>
         </div>
       </div>
+
+      <!-- AI音声入力ツール -->
+      <div class="settings-group" style="margin-top: 16px;">
+        <div class="setting-item" style="flex-direction: column; align-items: stretch; gap: 12px; padding: 12px;">
+          <div class="setting-info" style="margin-bottom: 4px;">
+            <div class="setting-title">AI音声入力 (Gemini)</div>
+            <div class="setting-desc">音声で入力し、Geminiでテキスト化・文章作成を行います</div>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="password" id="geminiApiKey" placeholder="Gemini APIキー" style="flex: 1; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color, #ccc); background: var(--bg-color, #fff); color: var(--text-color, #333);">
+            <button id="saveApiKeyBtn" class="action-btn" style="padding: 6px 12px; flex-shrink: 0; flex: none;" title="APIキーを保存">保存</button>
+            <button id="checkModelsBtn" class="action-btn" style="padding: 6px 12px; flex-shrink: 0; flex: none;" title="利用可能なモデルを確認">確認</button>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 8px 0; gap: 8px;">
+            <button id="voiceInputBtn" class="action-btn" style="width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0; background-color: var(--primary-color, #007bff); color: white; flex: none;" title="録音開始">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 24px; height: 24px;">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </button>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div id="voiceStatus" style="font-size: 12px; color: var(--text-muted, #666);">待機中</div>
+              <button id="copyResultBtn" class="action-btn" style="padding: 4px 8px; font-size: 11px; display: flex; align-items: center; gap: 4px; flex: none;" title="結果をコピー">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                <span>コピー</span>
+              </button>
+              <button id="cancelVoiceBtn" class="action-btn hidden" style="padding: 4px 8px; font-size: 11px; display: flex; align-items: center; gap: 4px; flex: none; color: var(--danger); border-color: var(--danger);" title="録音をキャンセル">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                  <path d="M18 6 6 18M6 6l12 12"/>
+                </svg>
+                <span>中止</span>
+              </button>
+            </div>
+          </div>
+          <textarea id="voiceResultArea" rows="5" placeholder="認識結果やAIの回答がここに表示されます..." style="width: 100%; border-radius: 4px; border: 1px solid var(--border-color, #ccc); background: var(--bg-color, #fff); color: var(--text-color, #333); padding: 8px; resize: vertical; box-sizing: border-box;"></textarea>
+        </div>
+      </div>
     </section>
   </main>
 

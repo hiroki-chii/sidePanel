@@ -46,9 +46,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadAppState(); // 保存された状態を読み込む
   switchTab(state.activeTab); // 保存されたタブに切り替え
   loadBookmarks();
-  setupTabListeners();
   setupBookmarkListeners();
   loadToolsSettings();
+  setupVoiceTool();
 });
 
 // ===========================
@@ -1074,4 +1074,270 @@ function loadToolsSettings() {
   if (toggleYtShortsAutoScroll) {
     toggleYtShortsAutoScroll.addEventListener('change', (e) => chrome.storage.local.set({ autoScrollYtShorts: e.target.checked }));
   }
+}
+
+// ===========================
+// AI音声入力ツール
+// ===========================
+let mediaRecorder = null;
+let audioChunks = [];
+
+function setupVoiceTool() {
+  const apiKeyInput = document.getElementById('geminiApiKey');
+  const saveKeyBtn = document.getElementById('saveApiKeyBtn');
+  const voiceBtn = document.getElementById('voiceInputBtn');
+  const statusDisplay = document.getElementById('voiceStatus');
+  const resultArea = document.getElementById('voiceResultArea');
+
+  if (!apiKeyInput || !voiceBtn) return;
+
+  // URLパラメータのチェック（許可要求用）
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('requestMic') === 'true') {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        stream.getTracks().forEach(track => track.stop());
+        if (urlParams.get('autoClose') === 'true') {
+          window.close();
+        }
+      })
+      .catch(err => {
+        console.error('マイク許可エラー:', err);
+        if (urlParams.get('autoClose') === 'true') {
+          // 拒否された場合や設定でブロックされている場合も閉じる
+          // ユーザーに認識させるため一瞬待ってから閉じる
+          showToast('マイクの使用が許可されませんでした。ブラウザ設定を確認してください。');
+          setTimeout(() => window.close(), 2000);
+        }
+      });
+  }
+
+  // 保存されているAPIキーを読み込む
+  chrome.storage.local.get(['geminiApiKey'], (result) => {
+    if (result.geminiApiKey) {
+      apiKeyInput.value = result.geminiApiKey;
+    }
+  });
+
+  // APIキーの保存
+  saveKeyBtn.addEventListener('click', () => {
+    const key = apiKeyInput.value.trim();
+    chrome.storage.local.set({ geminiApiKey: key }, () => {
+      showToast('APIキーを保存しました');
+    });
+  });
+
+  // 利用可能なモデルの確認
+  const checkModelsBtn = document.getElementById('checkModelsBtn');
+  if (checkModelsBtn) {
+    checkModelsBtn.addEventListener('click', async () => {
+      const apiKey = apiKeyInput.value.trim();
+      if (!apiKey) {
+        showToast('APIキーを入力してください');
+        return;
+      }
+      resultArea.value = 'モデル一覧を取得中...';
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+        const data = await response.json();
+        if (data.models) {
+          const names = data.models
+            .filter(m => m.supportedGenerationMethods.includes('generateContent'))
+            .map(m => m.name.replace('models/', ''))
+            .join('\n');
+          resultArea.value = "利用可能なモデル一覧:\n" + names;
+        } else {
+          resultArea.value = "モデルが見つかりませんでした:\n" + JSON.stringify(data);
+        }
+      } catch (e) {
+        resultArea.value = "通信エラー: " + e.message;
+      }
+    });
+  }
+
+  // コピーボタンの処理
+  const copyBtn = document.getElementById('copyResultBtn');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      const text = resultArea.value;
+      if (text) {
+        navigator.clipboard.writeText(text);
+        showToast('クリップボードにコピーしました');
+      }
+    });
+  }
+
+  let isRecording = false;
+  let isVoiceCancelled = false;
+
+  const cancelBtn = document.getElementById('cancelVoiceBtn');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      isVoiceCancelled = true;
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+    });
+  }
+
+  voiceBtn.addEventListener('click', async () => {
+    if (!isRecording) {
+      isVoiceCancelled = false;
+      // 録音開始
+      const apiKey = apiKeyInput.value.trim();
+      if (!apiKey) {
+        showToast('Gemini APIキーを入力して保存してください');
+        return;
+      }
+
+      try {
+        // 現在の権限状態を確認
+        const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+        
+        if (permissionStatus.state === 'denied') {
+          showToast('マイクの使用がブラウザ設定でブロックされています。アドレスバーのアイコンから「許可」に変更してください。');
+          statusDisplay.textContent = '設定でブロック中';
+          return;
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+        audioChunks = [];
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunks.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          // UIを元に戻す共通処理
+          voiceBtn.style.backgroundColor = 'var(--primary-color, #007bff)';
+          voiceBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 24px; height: 24px;"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
+          cancelBtn.classList.add('hidden');
+          copyBtn.classList.remove('hidden');
+
+          if (isVoiceCancelled) {
+            statusDisplay.textContent = '中止しました';
+            statusDisplay.style.color = 'var(--text-muted, #666)';
+            stream.getTracks().forEach(track => track.stop());
+            return;
+          }
+
+          const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+          statusDisplay.textContent = '認識・生成中...';
+          statusDisplay.style.color = 'var(--primary-color, #007bff)';
+          
+          try {
+            const base64Data = await blobToBase64(audioBlob);
+            await sendToGemini(base64Data, apiKey, resultArea, statusDisplay);
+          } catch (e) {
+            console.error('Gemini API Error:', e);
+            statusDisplay.textContent = 'エラー: ' + (e.message || '不明なエラー');
+            statusDisplay.style.color = 'red';
+            showToast('API呼び出しでエラーが発生しました: ' + e.message);
+          }
+          
+          // マイク解放
+          stream.getTracks().forEach(track => track.stop());
+        };
+
+        mediaRecorder.start();
+        isRecording = true;
+        
+        // 録音中の見た目
+        voiceBtn.style.backgroundColor = 'red';
+        voiceBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none" style="width: 24px; height: 24px;"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+        statusDisplay.textContent = '録音中... (クリックで停止)';
+        statusDisplay.style.color = 'red';
+        resultArea.value = '';
+
+        // ボタンの切り替え
+        copyBtn.classList.add('hidden');
+        cancelBtn.classList.remove('hidden');
+
+      } catch (err) {
+        console.error('マイクへのアクセスに失敗しました', err);
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          // サイドパネルではプロンプトが出せないため、小さなポップアップを一時的に開いてダイアログを出す
+          showToast('マイクの使用許可が必要です。ポップアップで許可を選択してください。');
+          chrome.windows.create({
+            url: chrome.runtime.getURL('sidepanel.html?requestMic=true&autoClose=true'),
+            type: 'popup',
+            width: 1,
+            height: 1,
+            focused: true
+          });
+          statusDisplay.textContent = '許可待ち...';
+        } else {
+          showToast('録音を開始できませんでした: ' + err.message);
+          statusDisplay.textContent = 'エラー';
+        }
+      }
+    } else {
+      // 録音停止（通常）
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+      isRecording = false;
+    }
+  });
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      // "data:audio/webm;base64,xxxx" の "xxxx" 部分のみ取り出す
+      const dataUrl = reader.result;
+      const base64 = dataUrl.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function sendToGemini(base64Audio, apiKey, resultArea, statusDisplay) {
+  const modelId = "gemini-3-flash-preview";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+  
+  const payload = {
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: "提供された音声を解析して、論理的で自然な文章に整えてください。挨拶や余計な解説を省き、コピーしてすぐに使える状態で出力してください。箇条書きの指示などがあれば、それに従って構造化してください。"
+          },
+          {
+            inlineData: {
+              mimeType: "audio/webm",
+              data: base64Audio
+            }
+          }
+        ]
+      }
+    ]
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || 'APIエラー');
+  }
+
+  const data = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+  
+  resultArea.value = text;
+  
+  statusDisplay.textContent = '完了';
+  statusDisplay.style.color = 'var(--text-color, #333)';
 }

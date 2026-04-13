@@ -8,7 +8,12 @@
     "tabs",
     "bookmarks",
     "favicon",
-    "storage"
+    "storage",
+    "audioCapture",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://generativelanguage.googleapis.com/*"
   ],
   "side_panel": {
     "default_path": "sidepanel.html"
