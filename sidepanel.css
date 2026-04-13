@@ -940,3 +940,27 @@ input:checked + .toggle-slider:before {
   transform: translateX(16px);
   background-color: #fff;
 }
+
+/* ===========================
+   ブックマーク ドラッグ&ドロップ
+   =========================== */
+.bookmark-item.dragging,
+.bookmark-folder.dragging {
+  opacity: 0.5;
+  background: var(--bg-active);
+}
+
+.bookmark-item.drag-over-top,
+.bookmark-folder.drag-over-top {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.bookmark-item.drag-over-bottom,
+.bookmark-folder.drag-over-bottom {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.bookmark-folder.drag-over-into > .bookmark-folder-header {
+  background: var(--accent-subtle);
+  outline: 1px dashed var(--accent);
+}

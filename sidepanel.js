@@ -12,6 +12,7 @@ const state = {
   activeTab: 'tabs', // 'tabs' | 'bookmarks' | 'tools'
   tabs: [],
   bookmarks: [],
+  openFolderIds: new Set(), // 開いているフォルダのIDを保持
 };
 
 // ===========================
@@ -324,6 +325,9 @@ function setupBookmarkListeners() {
   chrome.bookmarks.onRemoved.addListener(() => {
     refreshBookmarkUI();
   });
+  chrome.bookmarks.onMoved.addListener(() => {
+    refreshBookmarkUI();
+  });
   chrome.bookmarks.onChanged.addListener(() => {
     refreshBookmarkUI();
   });
@@ -411,6 +415,7 @@ function renderTabs() {
 }
 
 let draggedTabId = null;
+let draggedBookmarkId = null;
 
 function bindTabDragAndDrop() {
   const tabItems = dom.tabsList.querySelectorAll('.tab-item');
@@ -594,8 +599,11 @@ function renderBookmarkNode(node) {
       childrenHTML += renderBookmarkNode(child);
     });
 
+    const isOpen = state.openFolderIds.has(node.id);
+    const openClass = isOpen ? ' open' : '';
+
     return `
-      <div class="bookmark-folder" data-folder-id="${node.id}">
+      <div class="bookmark-folder${openClass}" data-bookmark-id="${node.id}" draggable="true">
         <div class="bookmark-folder-header">
           <svg class="folder-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 18l6-6-6-6"/>
@@ -625,7 +633,7 @@ function createBookmarkItemHTML(node) {
     : getFaviconPlaceholderHTML();
 
   return `
-    <div class="bookmark-item" data-bookmark-id="${node.id}" data-url="${escapeHTML(node.url)}">
+    <div class="bookmark-item" data-bookmark-id="${node.id}" data-url="${escapeHTML(node.url)}" draggable="true">
       ${faviconHTML}
       <span class="bookmark-item-title">${escapeHTML(node.title || node.url)}</span>
     </div>
@@ -637,7 +645,14 @@ function bindBookmarkEvents() {
   dom.bookmarksList.querySelectorAll('.bookmark-folder-header').forEach((header) => {
     header.addEventListener('click', () => {
       const folder = header.closest('.bookmark-folder');
+      const id = folder.dataset.bookmarkId;
       folder.classList.toggle('open');
+      
+      if (folder.classList.contains('open')) {
+        state.openFolderIds.add(id);
+      } else {
+        state.openFolderIds.delete(id);
+      }
     });
   });
 
@@ -653,6 +668,121 @@ function bindBookmarkEvents() {
     item.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       showBookmarkContextMenu(e, item.dataset.bookmarkId, item.dataset.url);
+    });
+  });
+
+  // ドラッグ&ドロップのバインド
+  bindBookmarkDragAndDrop();
+}
+
+function bindBookmarkDragAndDrop() {
+  const items = dom.bookmarksList.querySelectorAll('.bookmark-item, .bookmark-folder');
+  
+  items.forEach((item) => {
+    item.addEventListener('dragstart', (e) => {
+      e.stopPropagation();
+      const id = item.dataset.bookmarkId;
+      if (!id) return;
+      
+      draggedBookmarkId = id;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', id);
+      
+      // ドラッグ中の表示
+      setTimeout(() => item.classList.add('dragging'), 0);
+    });
+
+    item.addEventListener('dragend', (e) => {
+      e.stopPropagation();
+      item.classList.remove('dragging', 'drag-over-top', 'drag-over-bottom', 'drag-over-into');
+      draggedBookmarkId = null;
+    });
+
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (!draggedBookmarkId) return;
+      
+      const rect = item.getBoundingClientRect();
+      const mid = rect.top + rect.height / 2;
+      
+      item.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-into');
+      
+      if (item.classList.contains('bookmark-folder')) {
+        const quarter = rect.height / 4;
+        if (e.clientY < rect.top + quarter) {
+          item.classList.add('drag-over-top');
+        } else if (e.clientY > rect.bottom - quarter) {
+          item.classList.add('drag-over-bottom');
+        } else {
+          item.classList.add('drag-over-into');
+        }
+      } else {
+        if (e.clientY < mid) {
+          item.classList.add('drag-over-top');
+        } else {
+          item.classList.add('drag-over-bottom');
+        }
+      }
+      
+      e.dataTransfer.dropEffect = 'move';
+    });
+
+    item.addEventListener('dragleave', (e) => {
+      e.stopPropagation();
+      item.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-into');
+    });
+
+    item.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const id = e.dataTransfer.getData('text/plain') || draggedBookmarkId;
+      if (!id) return;
+
+      const isOverTop = item.classList.contains('drag-over-top');
+      const isOverBottom = item.classList.contains('drag-over-bottom');
+      const isOverInto = item.classList.contains('drag-over-into');
+      
+      item.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-into');
+      
+      const targetId = item.dataset.bookmarkId;
+      if (!targetId || id === targetId) return;
+
+      try {
+        const targetNodes = await chrome.bookmarks.get(targetId);
+        if (!targetNodes || targetNodes.length === 0) return;
+        const targetNode = targetNodes[0];
+        
+        if (isOverInto && item.classList.contains('bookmark-folder')) {
+          // フォルダの中に移動（末尾に追加）
+          await chrome.bookmarks.move(id, { parentId: targetId });
+        } else {
+          // 前後への移動
+          let targetIndex = targetNode.index;
+          const targetParentId = targetNode.parentId;
+
+          // ルートレベル（ID 0の子）への移動は制限があるため、親が0の場合は何もしないか、適切な処理が必要
+          // 通常は「ブックマークバー(1)」や「その他のブックマーク(2)」の配下で動く
+          if (targetParentId === '0') {
+            return;
+          }
+
+          if (isOverBottom) {
+            targetIndex++;
+          }
+          
+          await chrome.bookmarks.move(id, { 
+            parentId: targetParentId, 
+            index: targetIndex 
+          });
+        }
+      } catch (err) {
+        console.error('Bookmark D&D Error:', err);
+        // エラーが発生した場合は再描画して状態を復元
+        refreshBookmarkUI();
+      }
     });
   });
 }
