@@ -901,9 +901,9 @@ function loadToolsSettings() {
 
   if (!toggleXSidebar) return;
 
-  // 初期値の読み込み
-  chrome.storage.local.get(['hideXSidebar'], (result) => {
-    if (toggleXSidebar) toggleXSidebar.checked = !!result.hideXSidebar;
+  // 初期値の読み込み（デフォルト：false=表示状態）
+  chrome.storage.local.get({ hideXSidebar: false }, (result) => {
+    if (toggleXSidebar) toggleXSidebar.checked = result.hideXSidebar;
   });
 
   // 変更の保存
