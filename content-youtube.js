@@ -96,4 +96,92 @@
       style.disabled = !changes.sidePanelOpen.newValue;
     }
   });
+
+  // === YouTube Shorts 自動スクロール ===
+  let autoScrollEnabled = false;
+  let videoCheckInterval = null;
+  const monitoredVideos = new WeakSet();
+  let isNavigating = false;
+
+  function initAutoScroll() {
+    chrome.storage.local.get(['autoScrollYtShorts'], (result) => {
+      autoScrollEnabled = result.autoScrollYtShorts === true;
+      if (autoScrollEnabled) {
+        startAutoScrollMonitor();
+      }
+    });
+
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+      if (namespace === 'local' && changes.autoScrollYtShorts !== undefined) {
+        autoScrollEnabled = changes.autoScrollYtShorts.newValue;
+        if (autoScrollEnabled) {
+          startAutoScrollMonitor();
+        } else {
+          stopAutoScrollMonitor();
+        }
+      }
+    });
+  }
+
+  function startAutoScrollMonitor() {
+    if (videoCheckInterval) return;
+    // 新しく追加されたvideo要素を定期的にフックアップする
+    videoCheckInterval = setInterval(bindVideoEvents, 1000);
+    bindVideoEvents();
+  }
+
+  function stopAutoScrollMonitor() {
+    if (videoCheckInterval) {
+      clearInterval(videoCheckInterval);
+      videoCheckInterval = null;
+    }
+  }
+
+  function bindVideoEvents() {
+    if (!autoScrollEnabled) return;
+    if (!window.location.pathname.startsWith('/shorts/')) return;
+
+    const videos = document.querySelectorAll('video');
+    videos.forEach(video => {
+      if (!monitoredVideos.has(video)) {
+        monitoredVideos.add(video);
+        video.addEventListener('timeupdate', handleTimeUpdate);
+      }
+    });
+  }
+
+  function handleTimeUpdate(e) {
+    if (!autoScrollEnabled) return;
+    if (isNavigating) return;
+    if (!window.location.pathname.startsWith('/shorts/')) return;
+
+    const video = e.target;
+    // 画面内に見えているか、または再生中かを確認（非アクティブな裏の動画の判定を無視）
+    const rect = video.getBoundingClientRect();
+    if (rect.bottom < 0 || rect.top > window.innerHeight) return;
+
+    // 動画終了まで残り 0.2 秒を切ったら次へ進む
+    if (video.duration > 0 && video.currentTime >= video.duration - 0.2) {
+      goToNextShort();
+    }
+  }
+
+  function goToNextShort() {
+    if (isNavigating) return;
+    isNavigating = true;
+
+    const nextBtn = document.querySelector('#navigation-button-down yt-button-shape button') ||
+      document.querySelector('ytd-shorts-container #navigation-button-down button');
+
+    if (nextBtn) {
+      nextBtn.click();
+    }
+
+    // 次の動画ロードから再生開始までの猶予としてクールダウンを設ける
+    setTimeout(() => {
+      isNavigating = false;
+    }, 1500);
+  }
+
+  initAutoScroll();
 })();

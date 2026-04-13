@@ -1059,16 +1059,19 @@ function getDisplayUrl(url) {
 // ===========================
 function loadToolsSettings() {
   const toggleXSidebar = document.getElementById('toggleXSidebar');
+  const toggleYtShortsAutoScroll = document.getElementById('toggleYtShortsAutoScroll');
 
-  if (!toggleXSidebar) return;
-
-  // 初期値の読み込み（デフォルト：false=表示状態）
-  chrome.storage.local.get({ hideXSidebar: false }, (result) => {
+  // 初期値の読み込み
+  chrome.storage.local.get({ hideXSidebar: false, autoScrollYtShorts: false }, (result) => {
     if (toggleXSidebar) toggleXSidebar.checked = result.hideXSidebar;
+    if (toggleYtShortsAutoScroll) toggleYtShortsAutoScroll.checked = result.autoScrollYtShorts;
   });
 
   // 変更の保存
   if (toggleXSidebar) {
     toggleXSidebar.addEventListener('change', (e) => chrome.storage.local.set({ hideXSidebar: e.target.checked }));
+  }
+  if (toggleYtShortsAutoScroll) {
+    toggleYtShortsAutoScroll.addEventListener('change', (e) => chrome.storage.local.set({ autoScrollYtShorts: e.target.checked }));
   }
 }
