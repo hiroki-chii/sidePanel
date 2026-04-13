@@ -10,10 +10,12 @@
     "favicon",
     "storage",
     "audioCapture",
-    "scripting"
+    "scripting",
+    "activeTab"
   ],
   "host_permissions": [
-    "https://generativelanguage.googleapis.com/*"
+    "https://generativelanguage.googleapis.com/*",
+    "<all_urls>"
   ],
   "side_panel": {
     "default_path": "sidepanel.html"

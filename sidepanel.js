@@ -49,7 +49,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadBookmarks();
   setupBookmarkListeners();
   loadToolsSettings();
+  setupSettings(); // 設定パネルの初期化
   setupVoiceTool();
+  setupSummaryTool(); // ページ要約ツールの初期化
 });
 
 // ===========================
@@ -289,7 +291,7 @@ function setupTabListeners() {
   chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     // 全リストを更新（changeInfoに関わらず確実な反映のため）
     await loadTabs();
-    
+
     // 現在のアクティブタブが更新されたらアドレスバーも合わせる
     if (tab.active) {
       updateAddressBar();
@@ -405,7 +407,7 @@ let draggedBookmarkId = null;
 
 function bindTabDragAndDrop() {
   const tabItems = dom.tabsList.querySelectorAll('.tab-item');
-  
+
   tabItems.forEach((item) => {
     item.addEventListener('dragstart', (e) => {
       draggedTabId = parseInt(item.dataset.tabId);
@@ -423,10 +425,10 @@ function bindTabDragAndDrop() {
     item.addEventListener('dragover', (e) => {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
-      
+
       const rect = item.getBoundingClientRect();
       const mid = rect.top + rect.height / 2;
-      
+
       item.classList.remove('drag-over-top', 'drag-over-bottom');
       if (e.clientY < mid) {
         item.classList.add('drag-over-top');
@@ -442,7 +444,7 @@ function bindTabDragAndDrop() {
     item.addEventListener('drop', async (e) => {
       e.preventDefault();
       item.classList.remove('drag-over-top', 'drag-over-bottom');
-      
+
       if (!draggedTabId) return;
       const targetTabId = parseInt(item.dataset.tabId);
       if (draggedTabId === targetTabId) return;
@@ -452,7 +454,7 @@ function bindTabDragAndDrop() {
 
       const rect = item.getBoundingClientRect();
       const mid = rect.top + rect.height / 2;
-      
+
       if (e.clientY >= mid) {
         targetIndex++;
       }
@@ -633,7 +635,7 @@ function bindBookmarkEvents() {
       const folder = header.closest('.bookmark-folder');
       const id = folder.dataset.bookmarkId;
       folder.classList.toggle('open');
-      
+
       if (folder.classList.contains('open')) {
         state.openFolderIds.add(id);
       } else {
@@ -664,17 +666,17 @@ function bindBookmarkEvents() {
 
 function bindBookmarkDragAndDrop() {
   const items = dom.bookmarksList.querySelectorAll('.bookmark-item, .bookmark-folder');
-  
+
   items.forEach((item) => {
     item.addEventListener('dragstart', (e) => {
       e.stopPropagation();
       const id = item.dataset.bookmarkId;
       if (!id) return;
-      
+
       draggedBookmarkId = id;
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', id);
-      
+
       // ドラッグ中の表示
       setTimeout(() => item.classList.add('dragging'), 0);
     });
@@ -688,14 +690,14 @@ function bindBookmarkDragAndDrop() {
     item.addEventListener('dragover', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      
+
       if (!draggedBookmarkId) return;
-      
+
       const rect = item.getBoundingClientRect();
       const mid = rect.top + rect.height / 2;
-      
+
       item.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-into');
-      
+
       if (item.classList.contains('bookmark-folder')) {
         const quarter = rect.height / 4;
         if (e.clientY < rect.top + quarter) {
@@ -712,7 +714,7 @@ function bindBookmarkDragAndDrop() {
           item.classList.add('drag-over-bottom');
         }
       }
-      
+
       e.dataTransfer.dropEffect = 'move';
     });
 
@@ -724,16 +726,16 @@ function bindBookmarkDragAndDrop() {
     item.addEventListener('drop', async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      
+
       const id = e.dataTransfer.getData('text/plain') || draggedBookmarkId;
       if (!id) return;
 
       const isOverTop = item.classList.contains('drag-over-top');
       const isOverBottom = item.classList.contains('drag-over-bottom');
       const isOverInto = item.classList.contains('drag-over-into');
-      
+
       item.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over-into');
-      
+
       const targetId = item.dataset.bookmarkId;
       if (!targetId || id === targetId) return;
 
@@ -741,7 +743,7 @@ function bindBookmarkDragAndDrop() {
         const targetNodes = await chrome.bookmarks.get(targetId);
         if (!targetNodes || targetNodes.length === 0) return;
         const targetNode = targetNodes[0];
-        
+
         if (isOverInto && item.classList.contains('bookmark-folder')) {
           // フォルダの中に移動（末尾に追加）
           await chrome.bookmarks.move(id, { parentId: targetId });
@@ -759,10 +761,10 @@ function bindBookmarkDragAndDrop() {
           if (isOverBottom) {
             targetIndex++;
           }
-          
-          await chrome.bookmarks.move(id, { 
-            parentId: targetParentId, 
-            index: targetIndex 
+
+          await chrome.bookmarks.move(id, {
+            parentId: targetParentId,
+            index: targetIndex
           });
         }
       } catch (err) {
@@ -1058,48 +1060,73 @@ function loadToolsSettings() {
 }
 
 // ===========================
+// 設定管理 (Gemini API)
+// ===========================
+function setupSettings() {
+  const settingsBtn = document.getElementById('navSettings');
+  const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+  const settingsContainer = document.getElementById('settingsContainer');
+  const apiKeyInput = document.getElementById('geminiApiKey');
+  const saveKeyBtn = document.getElementById('saveApiKeyBtn');
+
+  if (!settingsBtn || !settingsContainer || !apiKeyInput || !saveKeyBtn) return;
+
+  // 保存されているAPIキーを読み込む
+  chrome.storage.local.get(['geminiApiKey'], (result) => {
+    if (result.geminiApiKey) {
+      apiKeyInput.value = result.geminiApiKey;
+    }
+  });
+
+  // 設定ボタンのクリックで表示/非表示を切り替え
+  settingsBtn.addEventListener('click', () => {
+    settingsContainer.classList.toggle('hidden');
+    if (!settingsContainer.classList.contains('hidden')) {
+      apiKeyInput.focus();
+    }
+  });
+
+  // 閉じるボタン
+  closeSettingsBtn.addEventListener('click', () => {
+    settingsContainer.classList.add('hidden');
+  });
+
+  // APIキーを保存
+  saveKeyBtn.addEventListener('click', () => {
+    const key = apiKeyInput.value.trim();
+    chrome.storage.local.set({ geminiApiKey: key }, () => {
+      showToast('APIキーを保存しました');
+      settingsContainer.classList.add('hidden');
+    });
+  });
+
+  // 外側をクリックしたら閉じる（任意）
+  document.addEventListener('mousedown', (e) => {
+    if (!settingsContainer.contains(e.target) && !settingsBtn.contains(e.target)) {
+      settingsContainer.classList.add('hidden');
+    }
+  });
+}
+
+// ===========================
 // AI音声入力ツール
 // ===========================
 let mediaRecorder = null;
 let audioChunks = [];
 
 function setupVoiceTool() {
-  const apiKeyInput = document.getElementById('geminiApiKey');
-  const saveKeyBtn = document.getElementById('saveApiKeyBtn');
   const voiceBtn = document.getElementById('voiceInputBtn');
   const statusDisplay = document.getElementById('voiceStatus');
   const resultArea = document.getElementById('voiceResultArea');
   const voiceModeSelect = document.getElementById('voiceMode');
 
-  if (!apiKeyInput || !voiceBtn || !voiceModeSelect) return;
-
-  // URLパラメータのチェック（許可要求用）
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('requestMic') === 'true') {
-    navigator.mediaDevices.getUserMedia({ audio: true })
-      .then(stream => {
-        stream.getTracks().forEach(track => track.stop());
-        if (urlParams.get('autoClose') === 'true') {
-          window.close();
-        }
-      })
-      .catch(err => {
-        console.error('マイク許可エラー:', err);
-        if (urlParams.get('autoClose') === 'true') {
-          // 拒否された場合や設定でブロックされている場合も閉じる
-          // ユーザーに認識させるため一瞬待ってから閉じる
-          resultArea.value = 'マイクの使用が許可されませんでした。ブラウザの設定からマイクを許可してください。';
-          setTimeout(() => window.close(), 3000);
-        }
-      });
-  }
+  if (!voiceBtn || !voiceModeSelect) return;
 
   // 折りたたみ制御
   const voiceToolHeader = document.getElementById('voiceToolHeader');
   const voiceToolGroup = voiceToolHeader ? voiceToolHeader.closest('.collapsible-group') : null;
 
   if (voiceToolHeader && voiceToolGroup) {
-    // 保存された状態を復元（デフォルトは閉じている状態）
     chrome.storage.local.get(['voiceToolExpanded'], (result) => {
       if (result.voiceToolExpanded) {
         voiceToolGroup.classList.add('open');
@@ -1113,21 +1140,10 @@ function setupVoiceTool() {
   }
 
   // 保存されている設定を読み込む
-  chrome.storage.local.get(['geminiApiKey', 'voiceMode'], (result) => {
-    if (result.geminiApiKey) {
-      apiKeyInput.value = result.geminiApiKey;
-    }
+  chrome.storage.local.get(['voiceMode'], (result) => {
     if (result.voiceMode) {
       voiceModeSelect.value = result.voiceMode;
     }
-  });
-
-  // 設定の保存
-  saveKeyBtn.addEventListener('click', () => {
-    const key = apiKeyInput.value.trim();
-    chrome.storage.local.set({ geminiApiKey: key }, () => {
-      showToast('APIキーを保存しました');
-    });
   });
 
   voiceModeSelect.addEventListener('change', () => {
@@ -1138,9 +1154,10 @@ function setupVoiceTool() {
   const checkModelsBtn = document.getElementById('checkModelsBtn');
   if (checkModelsBtn) {
     checkModelsBtn.addEventListener('click', async () => {
-      const apiKey = apiKeyInput.value.trim();
+      const result = await chrome.storage.local.get(['geminiApiKey']);
+      const apiKey = result.geminiApiKey;
       if (!apiKey) {
-        resultArea.value = 'APIキーを入力してください。';
+        resultArea.value = '設定（歯車アイコン）からGemini APIキーを入力して保存してください。';
         return;
       }
       resultArea.value = 'モデル一覧を取得中...';
@@ -1201,16 +1218,17 @@ function setupVoiceTool() {
     if (!isRecording) {
       isVoiceCancelled = false;
       // 録音開始
-      const apiKey = apiKeyInput.value.trim();
+      const result = await chrome.storage.local.get(['geminiApiKey']);
+      const apiKey = result.geminiApiKey;
       if (!apiKey) {
-        resultArea.value = 'Gemini APIキーを入力して「保存」してください。';
+        resultArea.value = '設定（歯車アイコン）からGemini APIキーを入力して保存してください。';
         return;
       }
 
       try {
         // 現在の権限状態を確認
         const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
-        
+
         if (permissionStatus.state === 'denied') {
           resultArea.value = 'マイクの使用がブラウザ設定でブロックされています。アドレスバーのアイコンから「許可」に設定し、ページを再読み込みしてください。';
           statusDisplay.textContent = '設定でブロック中';
@@ -1256,7 +1274,7 @@ function setupVoiceTool() {
 
           statusDisplay.textContent = '認識・生成中...';
           statusDisplay.style.color = 'var(--primary-color, #007bff)';
-          
+
           try {
             const base64Data = await blobToBase64(audioBlob);
             const mode = voiceModeSelect.value;
@@ -1268,7 +1286,7 @@ function setupVoiceTool() {
             statusDisplay.textContent = 'エラー発生';
             statusDisplay.style.color = 'var(--danger, red)';
           }
-          
+
           // マイク解放
           stream.getTracks().forEach(track => track.stop());
         };
@@ -1276,7 +1294,7 @@ function setupVoiceTool() {
         mediaRecorder.start();
         isRecording = true;
         recordingStartTime = Date.now();
-        
+
         // 録音中の見た目
         voiceBtn.style.backgroundColor = 'red';
         voiceBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none" style="width: 24px; height: 24px;"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
@@ -1341,22 +1359,22 @@ function getFriendlyErrorMessage(error) {
   if (status === 429 || message.includes('quota') || message.includes('too many requests')) {
     return '【エラー】リクエスト上限に達しました。しばらく時間を置いてから再度お試しください。';
   }
-  if (status === 503 || message.includes('overloaded') || message.includes('high demand') || message.includes('temporarily unavailable')) {
-    return '【エラー】AIモデルが現在大変混み合っています。少し時間（数分程度）を空けてから再度お話しください。';
+  if (status === 503 || message.includes('overloaded') || message.includes('high demand') || message.includes('temporarily unavailable') || message.includes('experiencing high demand')) {
+    return '【エラー】AIモデルが現在大変混み合っています。少し時間を空けてから再度お試しください。';
   }
   if (message.includes('network') || message.includes('fetch')) {
     return '【エラー】ネットワーク接続に問題があります。インターネット接続を確認してください。';
   }
-  
+
   return `【エラー】処理中に問題が発生しました。再度お試しください。\n(詳細: ${error.message || '不明なエラー'})`;
 }
 
 async function sendToGemini(base64Audio, apiKey, resultArea, statusDisplay, mode) {
   const modelId = "gemini-3-flash-preview";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
-  
+
   // 品質チェック用の共通指示
-  const qualityInstruction = "\n\n重要：提供された音声が極端に短い、またはノイズのみで情報が含まれていない、内容が聞き取り不能な場合は、指示に従って生成するのではなく、必ず「音声が短すぎるか、内容が聞き取りませんでした。もう一度お話しください。」というメッセージのみを出力してください。";
+  const qualityInstruction = "\n\n重要：提供された音声が極端に短い、またはノイズのみで情報が含まれていない、内容が聞き取り不能な場合は、指示に従って生成するのではなく、必ず「音声が短すぎるか、内容が聞き取れませんでした。もう一度お話しください。」というメッセージのみを出力してください。";
 
   // モードに応じたプロンプトの出し分け
   let promptText = "";
@@ -1412,9 +1430,137 @@ async function sendToGemini(base64Audio, apiKey, resultArea, statusDisplay, mode
 
   const data = await response.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-  
+
   resultArea.value = text;
-  
+
   statusDisplay.textContent = '完了';
   statusDisplay.style.color = 'var(--text-color, #333)';
+}
+
+// ===========================
+// AIページ要約ツール
+// ===========================
+function setupSummaryTool() {
+  const summaryBtn = document.getElementById('summarizeBtn');
+  const copyBtn = document.getElementById('copySummaryBtn');
+  const clearBtn = document.getElementById('clearSummaryBtn');
+  const resultArea = document.getElementById('summaryResultArea');
+  const statusDisplay = document.getElementById('summaryStatus');
+  const modeSelect = document.getElementById('summaryMode');
+
+  if (!summaryBtn || !resultArea || !modeSelect) return;
+
+  // 折りたたみ制御
+  const header = document.getElementById('summaryToolHeader');
+  const group = header ? header.closest('.collapsible-group') : null;
+  if (header && group) {
+    chrome.storage.local.get(['summaryToolExpanded'], (result) => {
+      if (result.summaryToolExpanded) group.classList.add('open');
+    });
+    header.addEventListener('click', () => {
+      const isOpen = group.classList.toggle('open');
+      chrome.storage.local.set({ summaryToolExpanded: isOpen });
+    });
+  }
+
+  // 保存設定の読み込み
+  chrome.storage.local.get(['summaryMode'], (result) => {
+    if (result.summaryMode) modeSelect.value = result.summaryMode;
+  });
+  modeSelect.addEventListener('change', () => {
+    chrome.storage.local.set({ summaryMode: modeSelect.value });
+  });
+
+  // 要約実行
+  summaryBtn.addEventListener('click', async () => {
+    const res = await chrome.storage.local.get(['geminiApiKey']);
+    const apiKey = res.geminiApiKey;
+    if (!apiKey) {
+      resultArea.value = '設定（歯車アイコン）からGemini APIキーを入力して保存してください。';
+      return;
+    }
+
+    statusDisplay.textContent = 'ページ内容を取得中...';
+    statusDisplay.style.display = 'block';
+    resultArea.value = '';
+
+    try {
+      const text = await getActiveTabText();
+      if (!text || text.trim().length < 20) {
+        throw new Error('ページのテキスト内容が不足しているか、取得できませんでした。');
+      }
+
+      statusDisplay.textContent = '要約を作成中...';
+      const mode = modeSelect.value;
+      await sendTextToGemini(text, apiKey, resultArea, statusDisplay, mode);
+    } catch (e) {
+      console.error('Summary Error:', e);
+      const friendlyMsg = getFriendlyErrorMessage(e);
+      resultArea.value = friendlyMsg;
+      statusDisplay.textContent = 'エラー発生';
+      statusDisplay.style.color = 'var(--danger)';
+    }
+  });
+
+  // コピー・クリア
+  copyBtn.addEventListener('click', () => {
+    if (resultArea.value) {
+      navigator.clipboard.writeText(resultArea.value);
+      showToast('クリップボードにコピーしました');
+    }
+  });
+  clearBtn.addEventListener('click', () => { resultArea.value = ''; });
+}
+
+async function getActiveTabText() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab || !tab.id || tab.url.startsWith('chrome:')) return null;
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: () => document.body.innerText
+  });
+
+  return results[0]?.result;
+}
+
+async function sendTextToGemini(text, apiKey, resultArea, statusDisplay, mode) {
+  const modelId = "gemini-3-flash-preview";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+
+  let promptText = "";
+  switch (mode) {
+    case 'bullets':
+      promptText = "以下のウェブページの内容を、重要なポイントに絞って構造化された箇条書き（ネスト形式）でまとめてください。解説や挨拶は省き、本文のみを出力してください。\n\n内容:\n" + text;
+      break;
+    case 'detailed':
+      promptText = "以下のウェブページの内容を詳細に解説してください。背景、主要な主張、結論、および注目すべき詳細を含めて丁寧に説明してください。\n\n内容:\n" + text;
+      break;
+    case 'summary':
+    default:
+      promptText = "以下のウェブページの内容を簡潔に要約してください。全体像がひと目で分かるようにまとめてください。\n\n内容:\n" + text;
+      break;
+  }
+
+  const payload = {
+    contents: [{ role: "user", parts: [{ text: promptText }] }]
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw { status: response.status, message: errorData.error?.message || 'API Error' };
+  }
+
+  const data = await response.json();
+  const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+  resultArea.value = resultText;
+  statusDisplay.textContent = '完了';
+  statusDisplay.style.color = 'var(--text-primary)';
+  setTimeout(() => { statusDisplay.style.display = 'none'; }, 3000);
 }

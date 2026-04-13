@@ -378,6 +378,13 @@ body {
   display: block;
 }
 
+#toolsPanel.active {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -900,7 +907,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
-  padding-top: var(--spacing-sm);
 }
 
 .setting-item {
@@ -1063,4 +1069,78 @@ input:checked + .toggle-slider:before {
 
 .collapsible-content > div {
   min-height: 0;
+}
+
+/* ===========================
+   設定パネル (Gemini API)
+   =========================== */
+.settings-panel {
+  margin: 0 var(--spacing-md) var(--spacing-sm);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  animation: slideDown var(--transition-base) ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.settings-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.settings-panel-header .close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  border-radius: 4px;
+}
+
+.settings-panel-header .close-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.settings-panel-header .close-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.settings-panel-content {
+  padding: var(--spacing-md);
+}
+
+/* ===========================
+   要約ツール・音声ツール共通
+   =========================== */
+#voiceMode:hover, #summaryMode:hover {
+  border-color: var(--accent) !important;
+}
+
+#voiceMode:focus, #summaryMode:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+#summarizeBtn {
+  margin-top: 4px;
+}
+
+#summarizeBtn:active {
+  transform: scale(0.98);
 }

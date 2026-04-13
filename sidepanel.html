@@ -28,11 +28,36 @@
         </svg>
       </button>
       <div class="nav-spacer"></div>
+      <button id="navSettings" class="nav-btn" title="設定">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
       <button id="navFullscreen" class="nav-btn" title="全画面切替">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
         </svg>
       </button>
+    </div>
+
+    <!-- 設定パネル -->
+    <div id="settingsContainer" class="settings-panel hidden">
+      <div class="settings-panel-header">
+        <span>設定 (Gemini API)</span>
+        <button id="closeSettingsBtn" class="close-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="settings-panel-content">
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="password" id="geminiApiKey" placeholder="Gemini APIキーを入力" style="flex: 1; padding: 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;">
+          <button id="saveApiKeyBtn" class="action-btn" style="padding: 6px 12px; flex: none;" title="APIキーを保存">保存</button>
+        </div>
+        <p style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">※APIキーはブラウザに安全に保存されます。</p>
+      </div>
     </div>
 
     <!-- タブ切り替え -->
@@ -111,35 +136,35 @@
 
     <!-- ツール一覧 -->
     <section id="toolsPanel" class="panel">
-      <div class="settings-group">
-        <div class="setting-item">
-          <div class="setting-info">
-            <div class="setting-title">X (Twitter) 右サイドバー非表示</div>
-            <div class="setting-desc">おすすめトレンド等を隠します</div>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="toggleXSidebar">
-            <span class="toggle-slider"></span>
-          </label>
+      <!-- ツールの各アイテムを同レベルに指定して間隔を統一 -->
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-title">X (Twitter) 右サイドバー非表示</div>
+          <div class="setting-desc">おすすめトレンド等を隠します</div>
         </div>
-        <div class="setting-item">
-          <div class="setting-info">
-            <div class="setting-title">YouTube Shorts 自動送り</div>
-            <div class="setting-desc">ショート動画終了時に自動で次へ進みます</div>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="toggleYtShortsAutoScroll">
-            <span class="toggle-slider"></span>
-          </label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="toggleXSidebar">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-title">YouTube Shorts 自動送り</div>
+          <div class="setting-desc">ショート動画終了時に自動で次へ進みます</div>
         </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="toggleYtShortsAutoScroll">
+          <span class="toggle-slider"></span>
+        </label>
       </div>
 
       <!-- AI音声入力ツール -->
-      <div class="settings-group collapsible-group" style="margin-top: 16px;">
+      <div class="settings-group collapsible-group">
         <div class="setting-item collapsible-header" id="voiceToolHeader">
           <div class="setting-info">
             <div class="setting-title">AI音声入力 (Gemini)</div>
-            <div class="setting-desc">音声で入力し、Geminiでテキスト化・文章作成を行います</div>
+            <div class="setting-desc">音声をGeminiでテキスト化・文章作成します</div>
           </div>
           <div class="chevron-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -148,11 +173,9 @@
           </div>
         </div>
         <div class="collapsible-content" id="voiceToolContent">
-          <div class="setting-item" style="flex-direction: column; align-items: stretch; gap: 12px; padding: 12px; border-top: none; border-top-left-radius: 0; border-top-right-radius: 0;">
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <input type="password" id="geminiApiKey" placeholder="Gemini APIキー" style="flex: 1; padding: 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-primary);">
-              <button id="saveApiKeyBtn" class="action-btn" style="padding: 6px 12px; flex-shrink: 0; flex: none;" title="APIキーを保存">保存</button>
-              <button id="checkModelsBtn" class="action-btn" style="padding: 6px 12px; flex-shrink: 0; flex: none;" title="利用可能なモデルを確認">確認</button>
+          <div class="setting-item" style="flex-direction: column; align-items: stretch; gap: 12px; padding: 12px; border-top: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <button id="checkModelsBtn" class="action-btn" style="padding: 4px 8px; font-size: 11px; flex: none;" title="利用可能なモデルを確認">モデル確認</button>
             </div>
             <div style="display: flex; flex-direction: column; gap: 4px;">
               <label for="voiceMode" style="font-size: 11px; color: var(--text-muted); margin-left: 2px;">モード設定</label>
@@ -196,6 +219,58 @@
               </div>
             </div>
             <textarea id="voiceResultArea" rows="5" placeholder="認識結果やAIの回答がここに表示されます..." style="width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-primary); padding: 12px; resize: vertical; box-sizing: border-box; font-size: 13px; line-height: 1.6; outline: none;"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- AIページ要約ツール -->
+      <div class="settings-group collapsible-group">
+        <div class="setting-item collapsible-header" id="summaryToolHeader">
+          <div class="setting-info">
+            <div class="setting-title">AIページ要約 (Gemini)</div>
+            <div class="setting-desc">表示中のページ内容をGeminiで要約します</div>
+          </div>
+          <div class="chevron-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </div>
+        </div>
+        <div class="collapsible-content" id="summaryToolContent">
+          <div class="setting-item" style="flex-direction: column; align-items: stretch; gap: 12px; padding: 12px; border-top: none;">
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <label for="summaryMode" style="font-size: 11px; color: var(--text-muted); margin-left: 2px;">モード設定</label>
+              <select id="summaryMode" style="width: 100%; padding: 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-primary); font-size: 13px; cursor: pointer; outline: none;">
+                <option value="summary">標準要約</option>
+                <option value="bullets">箇条書きで要約</option>
+                <option value="detailed">詳細な解説</option>
+              </select>
+            </div>
+            
+            <button id="summarizeBtn" class="action-btn" style="background-color: var(--accent); color: white; border-style: solid; border-color: var(--accent);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+              </svg>
+              <span>このページを要約する</span>
+            </button>
+
+            <div id="summaryStatus" style="font-size: 12px; color: var(--text-muted); text-align: center; display: none;">処理中...</div>
+
+            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+              <button id="copySummaryBtn" class="action-btn" style="padding: 4px 8px; font-size: 11px; display: flex; align-items: center; gap: 4px; flex: none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                <span>コピー</span>
+              </button>
+              <button id="clearSummaryBtn" class="action-btn" style="padding: 4px 8px; font-size: 11px; display: flex; align-items: center; gap: 4px; flex: none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                  <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/>
+                </svg>
+                <span>クリア</span>
+              </button>
+            </div>
+            <textarea id="summaryResultArea" rows="8" placeholder="要約結果がここに表示されます..." style="width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-primary); padding: 12px; resize: vertical; box-sizing: border-box; font-size: 13px; line-height: 1.6; outline: none;"></textarea>
           </div>
         </div>
       </div>
