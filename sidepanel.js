@@ -1088,8 +1088,9 @@ function setupVoiceTool() {
   const voiceBtn = document.getElementById('voiceInputBtn');
   const statusDisplay = document.getElementById('voiceStatus');
   const resultArea = document.getElementById('voiceResultArea');
+  const voiceModeSelect = document.getElementById('voiceMode');
 
-  if (!apiKeyInput || !voiceBtn) return;
+  if (!apiKeyInput || !voiceBtn || !voiceModeSelect) return;
 
   // URLパラメータのチェック（許可要求用）
   const urlParams = new URLSearchParams(window.location.search);
@@ -1106,25 +1107,32 @@ function setupVoiceTool() {
         if (urlParams.get('autoClose') === 'true') {
           // 拒否された場合や設定でブロックされている場合も閉じる
           // ユーザーに認識させるため一瞬待ってから閉じる
-          showToast('マイクの使用が許可されませんでした。ブラウザ設定を確認してください。');
-          setTimeout(() => window.close(), 2000);
+          resultArea.value = 'マイクの使用が許可されませんでした。ブラウザの設定からマイクを許可してください。';
+          setTimeout(() => window.close(), 3000);
         }
       });
   }
 
-  // 保存されているAPIキーを読み込む
-  chrome.storage.local.get(['geminiApiKey'], (result) => {
+  // 保存されている設定を読み込む
+  chrome.storage.local.get(['geminiApiKey', 'voiceMode'], (result) => {
     if (result.geminiApiKey) {
       apiKeyInput.value = result.geminiApiKey;
     }
+    if (result.voiceMode) {
+      voiceModeSelect.value = result.voiceMode;
+    }
   });
 
-  // APIキーの保存
+  // 設定の保存
   saveKeyBtn.addEventListener('click', () => {
     const key = apiKeyInput.value.trim();
     chrome.storage.local.set({ geminiApiKey: key }, () => {
       showToast('APIキーを保存しました');
     });
+  });
+
+  voiceModeSelect.addEventListener('change', () => {
+    chrome.storage.local.set({ voiceMode: voiceModeSelect.value });
   });
 
   // 利用可能なモデルの確認
@@ -1133,7 +1141,7 @@ function setupVoiceTool() {
     checkModelsBtn.addEventListener('click', async () => {
       const apiKey = apiKeyInput.value.trim();
       if (!apiKey) {
-        showToast('APIキーを入力してください');
+        resultArea.value = 'APIキーを入力してください。';
         return;
       }
       resultArea.value = 'モデル一覧を取得中...';
@@ -1169,6 +1177,7 @@ function setupVoiceTool() {
 
   let isRecording = false;
   let isVoiceCancelled = false;
+  let recordingStartTime = 0;
 
   const cancelBtn = document.getElementById('cancelVoiceBtn');
   if (cancelBtn) {
@@ -1187,7 +1196,7 @@ function setupVoiceTool() {
       // 録音開始
       const apiKey = apiKeyInput.value.trim();
       if (!apiKey) {
-        showToast('Gemini APIキーを入力して保存してください');
+        resultArea.value = 'Gemini APIキーを入力して「保存」してください。';
         return;
       }
 
@@ -1196,7 +1205,7 @@ function setupVoiceTool() {
         const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
         
         if (permissionStatus.state === 'denied') {
-          showToast('マイクの使用がブラウザ設定でブロックされています。アドレスバーのアイコンから「許可」に変更してください。');
+          resultArea.value = 'マイクの使用がブラウザ設定でブロックされています。アドレスバーのアイコンから「許可」に設定し、ページを再読み込みしてください。';
           statusDisplay.textContent = '設定でブロック中';
           return;
         }
@@ -1226,17 +1235,30 @@ function setupVoiceTool() {
           }
 
           const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+          const duration = (Date.now() - recordingStartTime) / 1000;
+
+          // 1.5秒未満は短すぎると判断して中断
+          if (duration < 1.5) {
+            statusDisplay.textContent = '待機中';
+            statusDisplay.style.color = 'var(--text-muted, #666)';
+            resultArea.value = '音声が短すぎます（1.5秒以上お話しください）。';
+            stream.getTracks().forEach(track => track.stop());
+            return;
+          }
+
           statusDisplay.textContent = '認識・生成中...';
           statusDisplay.style.color = 'var(--primary-color, #007bff)';
           
           try {
             const base64Data = await blobToBase64(audioBlob);
-            await sendToGemini(base64Data, apiKey, resultArea, statusDisplay);
+            const mode = voiceModeSelect.value;
+            await sendToGemini(base64Data, apiKey, resultArea, statusDisplay, mode);
           } catch (e) {
             console.error('Gemini API Error:', e);
-            statusDisplay.textContent = 'エラー: ' + (e.message || '不明なエラー');
-            statusDisplay.style.color = 'red';
-            showToast('API呼び出しでエラーが発生しました: ' + e.message);
+            const friendlyMsg = getFriendlyErrorMessage(e);
+            resultArea.value = friendlyMsg;
+            statusDisplay.textContent = 'エラー発生';
+            statusDisplay.style.color = 'var(--danger, red)';
           }
           
           // マイク解放
@@ -1245,6 +1267,7 @@ function setupVoiceTool() {
 
         mediaRecorder.start();
         isRecording = true;
+        recordingStartTime = Date.now();
         
         // 録音中の見た目
         voiceBtn.style.backgroundColor = 'red';
@@ -1261,7 +1284,7 @@ function setupVoiceTool() {
         console.error('マイクへのアクセスに失敗しました', err);
         if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
           // サイドパネルではプロンプトが出せないため、小さなポップアップを一時的に開いてダイアログを出す
-          showToast('マイクの使用許可が必要です。ポップアップで許可を選択してください。');
+          resultArea.value = 'マイクの使用許可が必要です。一時的に開かれるポップアップで「許可」を選択してください。';
           chrome.windows.create({
             url: chrome.runtime.getURL('sidepanel.html?requestMic=true&autoClose=true'),
             type: 'popup',
@@ -1271,7 +1294,7 @@ function setupVoiceTool() {
           });
           statusDisplay.textContent = '許可待ち...';
         } else {
-          showToast('録音を開始できませんでした: ' + err.message);
+          resultArea.value = '録音を開始できませんでした: ' + err.message;
           statusDisplay.textContent = 'エラー';
         }
       }
@@ -1299,17 +1322,61 @@ function blobToBase64(blob) {
   });
 }
 
-async function sendToGemini(base64Audio, apiKey, resultArea, statusDisplay) {
+function getFriendlyErrorMessage(error) {
+  const message = (error.message || '').toLowerCase();
+  const status = error.status;
+
+  if (status === 401 || status === 403 || message.includes('invalid') || message.includes('api_key') || message.includes('not valid')) {
+    return '【エラー】APIキーが無効です。「確認」ボタンでキーの状態をチェックするか、正しいキーを保存し直してください。';
+  }
+  if (status === 429 || message.includes('quota') || message.includes('too many requests')) {
+    return '【エラー】リクエスト上限に達しました。しばらく時間を置いてから再度お試しください。';
+  }
+  if (status === 503 || message.includes('overloaded') || message.includes('high demand') || message.includes('temporarily unavailable')) {
+    return '【エラー】AIモデルが現在大変混み合っています。少し時間（数分程度）を空けてから再度お話しください。';
+  }
+  if (message.includes('network') || message.includes('fetch')) {
+    return '【エラー】ネットワーク接続に問題があります。インターネット接続を確認してください。';
+  }
+  
+  return `【エラー】処理中に問題が発生しました。再度お試しください。\n(詳細: ${error.message || '不明なエラー'})`;
+}
+
+async function sendToGemini(base64Audio, apiKey, resultArea, statusDisplay, mode) {
   const modelId = "gemini-3-flash-preview";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
   
+  // 品質チェック用の共通指示
+  const qualityInstruction = "\n\n重要：提供された音声が極端に短い、またはノイズのみで情報が含まれていない、内容が聞き取り不能な場合は、指示に従って生成するのではなく、必ず「音声が短すぎるか、内容が聞き取りませんでした。もう一度お話しください。」というメッセージのみを出力してください。";
+
+  // モードに応じたプロンプトの出し分け
+  let promptText = "";
+  switch (mode) {
+    case 'summary':
+      promptText = "提供された音声を解析し、内容の要点を簡潔にまとめてください。主要なポイントを構造化された箇条書きで出力してください。挨拶や解説は不要です。" + qualityInstruction;
+      break;
+    case 'business':
+      promptText = "提供された音声の内容を、ビジネスシーンでそのまま使える丁寧な敬語（です・ます調）の文章に変換してください。論理構成を整え、必要に応じて感謝の言葉などを補いつつ、自然なビジネス文書（メールや報告書）の形式で出力してください。解説は不要です。" + qualityInstruction;
+      break;
+    case 'minutes':
+      promptText = "提供された音声から詳細な議事録を作成してください。以下の項目を含めて整理してください：\n1. 内容の要旨\n2. 決定事項\n3. ネクストアクション（課題）\n項目ごとに分かりやすく構造化し、挨拶や余計な解説を省いて出力してください。" + qualityInstruction;
+      break;
+    case 'bullets':
+      promptText = "提供された音声の内容をすべて網羅的に箇条書きに分解して整理してください。情報の階層構造（親子関係）を意識して、論理的にネストされたリスト形式で出力してください。解説は不要です。" + qualityInstruction;
+      break;
+    case 'standard':
+    default:
+      promptText = "提供された音声を解析して、論理的で自然な文章に整えてください。「えー」「あのー」などのフィラーを取り除き、文脈を補完して読みやすくしてください。挨拶や余計な解説を省き、コピーしてすぐに使える状態で出力してください。" + qualityInstruction;
+      break;
+  }
+
   const payload = {
     contents: [
       {
         role: "user",
         parts: [
           {
-            text: "提供された音声を解析して、論理的で自然な文章に整えてください。挨拶や余計な解説を省き、コピーしてすぐに使える状態で出力してください。箇条書きの指示などがあれば、それに従って構造化してください。"
+            text: promptText
           },
           {
             inlineData: {
@@ -1330,7 +1397,8 @@ async function sendToGemini(base64Audio, apiKey, resultArea, statusDisplay) {
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.error?.message || 'APIエラー');
+    const errorMsg = errorData.error?.message || 'API Error';
+    throw { status: response.status, message: errorMsg };
   }
 
   const data = await response.json();

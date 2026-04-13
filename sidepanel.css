@@ -965,3 +965,12 @@ input:checked + .toggle-slider:before {
   background: var(--accent-subtle);
   outline: 1px dashed var(--accent);
 }
+
+#voiceMode:hover {
+  border-color: var(--accent) !important;
+}
+
+#voiceMode:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
