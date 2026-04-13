@@ -1175,6 +1175,14 @@ function setupVoiceTool() {
     });
   }
 
+  // クリアボタンの処理
+  const clearBtn = document.getElementById('clearResultBtn');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      resultArea.value = '';
+    });
+  }
+
   let isRecording = false;
   let isVoiceCancelled = false;
   let recordingStartTime = 0;
@@ -1226,6 +1234,7 @@ function setupVoiceTool() {
           voiceBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 24px; height: 24px;"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
           cancelBtn.classList.add('hidden');
           copyBtn.classList.remove('hidden');
+          if (clearBtn) clearBtn.classList.remove('hidden');
 
           if (isVoiceCancelled) {
             statusDisplay.textContent = '中止しました';
@@ -1278,6 +1287,7 @@ function setupVoiceTool() {
 
         // ボタンの切り替え
         copyBtn.classList.add('hidden');
+        if (clearBtn) clearBtn.classList.add('hidden');
         cancelBtn.classList.remove('hidden');
 
       } catch (err) {
