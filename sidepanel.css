@@ -993,7 +993,6 @@ input:checked + .toggle-slider:before {
   width: 20px;
   height: 20px;
   color: var(--text-muted);
-  transition: transform var(--transition-slow) cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1004,21 +1003,19 @@ input:checked + .toggle-slider:before {
 }
 
 .collapsible-group {
-  gap: 0 !important; /* ヘッダーとコンテンツの間の不自然な隙間を抑える */
+  gap: 0 !important;
 }
 
 .collapsible-group.open .collapsible-header {
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
   background: var(--bg-hover);
-  border-bottom-color: transparent; /* 境界線を一体化 */
+  border-bottom-color: transparent;
 }
 
 .collapsible-content {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows var(--transition-slow) cubic-bezier(0.4, 0, 0.2, 1), 
-              visibility var(--transition-slow) step-end;
   overflow: hidden;
   visibility: hidden;
 }
@@ -1026,8 +1023,6 @@ input:checked + .toggle-slider:before {
 .collapsible-group.open .collapsible-content {
   grid-template-rows: 1fr;
   visibility: visible;
-  transition: grid-template-rows var(--transition-slow) cubic-bezier(0.4, 0, 0.2, 1), 
-              visibility var(--transition-slow) step-start;
 }
 
 .collapsible-content > div {

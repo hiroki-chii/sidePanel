@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupBookmarkAction();
   setupContextMenu();
   setupNewTabAction();
+  setupTabListeners(); // タブのイベントリスナーを設定
   loadTabs();
   await loadAppState(); // 保存された状態を読み込む
   switchTab(state.activeTab); // 保存されたタブに切り替え
@@ -277,49 +278,29 @@ async function loadTabs() {
 }
 
 function setupTabListeners() {
-  // タブの作成
-  chrome.tabs.onCreated.addListener((tab) => {
-    state.tabs.push(tab);
-    renderTabs();
-  });
+  // タブの作成・削除・移動・着脱時は全リストを更新
+  chrome.tabs.onCreated.addListener(() => loadTabs());
+  chrome.tabs.onRemoved.addListener(() => loadTabs());
+  chrome.tabs.onMoved.addListener(() => loadTabs());
+  chrome.tabs.onDetached.addListener(() => loadTabs());
+  chrome.tabs.onAttached.addListener(() => loadTabs());
 
-  // タブの更新
-  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    const index = state.tabs.findIndex((t) => t.id === tabId);
-    if (index !== -1) {
-      state.tabs[index] = tab;
-      renderTabs();
-    }
+  // タブの更新（タイトル、URL、アイコン、ピン状態、ミュート状態など）
+  chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    // 全リストを更新（changeInfoに関わらず確実な反映のため）
+    await loadTabs();
     
-    // 現在のタブのURLが更新されたらアドレスバーも更新
-    if (tab.active && changeInfo.url) {
+    // 現在のアクティブタブが更新されたらアドレスバーも合わせる
+    if (tab.active) {
       updateAddressBar();
     }
   });
 
-  // タブの削除
-  chrome.tabs.onRemoved.addListener((tabId) => {
-    state.tabs = state.tabs.filter((t) => t.id !== tabId);
-    renderTabs();
-  });
-
   // タブのアクティブ変更
-  chrome.tabs.onActivated.addListener(async (activeInfo) => {
-    state.tabs.forEach((t) => {
-      t.active = t.id === activeInfo.tabId;
-    });
-    renderTabs();
-    updateAddressBar(); // アドレスバーを更新
+  chrome.tabs.onActivated.addListener(async () => {
+    await loadTabs();
+    updateAddressBar(); // アドレスバーとブックマークボタンの状態を更新
   });
-
-  // タブの移動
-  chrome.tabs.onMoved.addListener(() => {
-    loadTabs();
-  });
-
-  // タブの着脱
-  chrome.tabs.onDetached.addListener(() => loadTabs());
-  chrome.tabs.onAttached.addListener(() => loadTabs());
 }
 
 function setupBookmarkListeners() {
