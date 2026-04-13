@@ -166,7 +166,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: var(--spacing-xs);
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-xs);
   border: none;
   background: transparent;
   color: var(--text-secondary);
@@ -175,6 +175,7 @@ body {
   font-weight: 500;
   cursor: pointer;
   border-radius: var(--radius-sm);
+  white-space: nowrap;
   transition: all var(--transition-base);
   position: relative;
   z-index: 1;

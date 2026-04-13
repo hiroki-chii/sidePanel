@@ -35,7 +35,7 @@ const dom = {
 // ===========================
 // 初期化
 // ===========================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   setupNavigation();
   setupTabNavigation();
   setupAddressBar();
@@ -43,6 +43,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupContextMenu();
   setupNewTabAction();
   loadTabs();
+  await loadAppState(); // 保存された状態を読み込む
+  switchTab(state.activeTab); // 保存されたタブに切り替え
   loadBookmarks();
   setupTabListeners();
   setupBookmarkListeners();
@@ -140,6 +142,9 @@ function switchTab(tab) {
   } else if (tab === 'bookmarks') {
     renderBookmarks();
   }
+
+  // 選択状態を保存
+  saveAppState();
 }
 
 // ===========================
@@ -653,6 +658,7 @@ function bindBookmarkEvents() {
       } else {
         state.openFolderIds.delete(id);
       }
+      saveAppState(); // 状態を保存
     });
   });
 
@@ -788,6 +794,31 @@ function bindBookmarkDragAndDrop() {
 }
 
 
+
+async function saveAppState() {
+  try {
+    await chrome.storage.local.set({
+      openFolderIds: Array.from(state.openFolderIds),
+      activeTab: state.activeTab
+    });
+  } catch (error) {
+    console.error('状態の保存に失敗:', error);
+  }
+}
+
+async function loadAppState() {
+  try {
+    const result = await chrome.storage.local.get(['openFolderIds', 'activeTab']);
+    if (result.openFolderIds) {
+      state.openFolderIds = new Set(result.openFolderIds);
+    }
+    if (result.activeTab) {
+      state.activeTab = result.activeTab;
+    }
+  } catch (error) {
+    console.error('状態の読み込みに失敗:', error);
+  }
+}
 
 function countBookmarks(node) {
   let count = 0;
