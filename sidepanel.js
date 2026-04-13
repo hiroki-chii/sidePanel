@@ -1113,6 +1113,24 @@ function setupVoiceTool() {
       });
   }
 
+  // 折りたたみ制御
+  const voiceToolHeader = document.getElementById('voiceToolHeader');
+  const voiceToolGroup = voiceToolHeader ? voiceToolHeader.closest('.collapsible-group') : null;
+
+  if (voiceToolHeader && voiceToolGroup) {
+    // 保存された状態を復元（デフォルトは閉じている状態）
+    chrome.storage.local.get(['voiceToolExpanded'], (result) => {
+      if (result.voiceToolExpanded) {
+        voiceToolGroup.classList.add('open');
+      }
+    });
+
+    voiceToolHeader.addEventListener('click', () => {
+      const isOpen = voiceToolGroup.classList.toggle('open');
+      chrome.storage.local.set({ voiceToolExpanded: isOpen });
+    });
+  }
+
   // 保存されている設定を読み込む
   chrome.storage.local.get(['geminiApiKey', 'voiceMode'], (result) => {
     if (result.geminiApiKey) {
