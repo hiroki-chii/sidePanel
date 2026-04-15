@@ -381,8 +381,8 @@ body {
 #toolsPanel.active {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
-  padding-top: var(--spacing-sm);
+  gap: var(--spacing-md);
+  padding-top: var(--spacing-md);
 }
 
 @keyframes fadeIn {
@@ -906,7 +906,7 @@ body {
 .settings-group {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-md);
 }
 
 .setting-item {
@@ -1042,6 +1042,11 @@ input:checked + .toggle-slider:before {
 
 .collapsible-group.open .chevron-icon {
   transform: rotate(180deg);
+  transition: transform var(--transition-slow) ease;
+}
+
+.collapsible-header .chevron-icon {
+  transition: transform var(--transition-slow) ease;
 }
 
 .collapsible-group {
@@ -1056,19 +1061,13 @@ input:checked + .toggle-slider:before {
 }
 
 .collapsible-content {
-  display: grid;
-  grid-template-rows: 0fr;
+  max-height: 0;
   overflow: hidden;
-  visibility: hidden;
+  transition: max-height var(--transition-slow) ease;
 }
 
 .collapsible-group.open .collapsible-content {
-  grid-template-rows: 1fr;
-  visibility: visible;
-}
-
-.collapsible-content > div {
-  min-height: 0;
+  max-height: 800px;
 }
 
 /* ===========================
