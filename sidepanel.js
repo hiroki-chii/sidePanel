@@ -147,7 +147,7 @@ async function updateNavButtonsStatus() {
 
     if (results && results[0] && results[0].result) {
       const { canGoBack, canGoForward, hasNavigation } = results[0].result;
-      
+
       if (hasNavigation) {
         dom.navBack.disabled = !canGoBack;
         dom.navForward.disabled = !canGoForward;
@@ -1298,7 +1298,7 @@ function setupVoiceTool() {
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
       resultArea.value = '';
-      if (statusDisplay && statusDisplay.textContent === 'エラー発生') {
+      if (statusDisplay && statusDisplay.textContent === 'エラーが発生しました') {
         statusDisplay.textContent = '待機中';
         statusDisplay.style.color = 'var(--text-muted, #666)';
       }
@@ -1389,7 +1389,7 @@ function setupVoiceTool() {
             console.error('Gemini API Error:', e);
             const friendlyMsg = getFriendlyErrorMessage(e);
             resultArea.value = friendlyMsg;
-            statusDisplay.textContent = 'エラー発生';
+            statusDisplay.textContent = 'エラーが発生しました';
             statusDisplay.style.color = 'var(--danger, red)';
           }
 
@@ -1428,7 +1428,7 @@ function setupVoiceTool() {
           statusDisplay.textContent = '許可待ち...';
         } else {
           resultArea.value = '録音を開始できませんでした: ' + err.message;
-          statusDisplay.textContent = 'エラー';
+          statusDisplay.textContent = 'エラーが発生しました';
         }
       }
     } else {
@@ -1459,20 +1459,26 @@ function getFriendlyErrorMessage(error) {
   const message = (error.message || '').toLowerCase();
   const status = error.status;
 
+  if (message.includes('system_page_restricted')) {
+    return '【制限】セキュリティ制限により取得できません。通常のウェブサイトで実行してください。';
+  }
+  if (message.includes('不足') || message.includes('取得できませんでした')) {
+    return '【エラー】ページのテキスト内容が不足しているか、取得できません。動的なコンテンツのみのページや、テキストが含まれないページの可能性があります。';
+  }
   if (status === 401 || status === 403 || message.includes('invalid') || message.includes('api_key') || message.includes('not valid')) {
-    return '【エラー】APIキーが無効です。正しいAPIキーを入力してください。';
+    return '【エラー】APIキーが無効です。設定から正しいAPIキーを入力してください。';
   }
   if (status === 429 || message.includes('quota') || message.includes('too many requests')) {
     return '【エラー】リクエスト上限に達しました。しばらく時間を置いてから再度お試しください。';
   }
-  if (status === 503 || message.includes('overloaded') || message.includes('high demand') || message.includes('temporarily unavailable') || message.includes('experiencing high demand')) {
-    return '【エラー】AIモデルが現在大変混み合っています。少し時間を空けるか、モデルを変更してから再度お試しください。';
+  if (status === 503 || message.includes('overloaded') || message.includes('high demand') || message.includes('temporarily unavailable')) {
+    return '【エラー】AIモデルが現在大変混み合っています。少し時間をおくか、モデルを変更してお試しください。';
   }
   if (message.includes('network') || message.includes('fetch')) {
-    return '【エラー】ネットワーク接続に問題があります。インターネット接続を確認してください。';
+    return '【エラー】ネットワーク接続に問題があります。接続を確認してください。';
   }
 
-  return `【エラー】処理中に問題が発生しました。再度お試しください。\n(詳細: ${error.message || '不明なエラー'})`;
+  return `【エラー】処理中に問題が発生しました。\n(詳細: ${error.message || '不明なエラー'})`;
 }
 
 async function sendToGemini(base64Audio, apiKey, resultArea, statusDisplay, mode) {
@@ -1604,7 +1610,7 @@ function setupSummaryTool() {
       console.error('Summary Error:', e);
       const friendlyMsg = getFriendlyErrorMessage(e);
       resultArea.value = friendlyMsg;
-      statusDisplay.textContent = 'エラー発生';
+      statusDisplay.textContent = 'エラーが発生しました';
       statusDisplay.style.color = 'var(--danger)';
     }
   });
@@ -1618,23 +1624,77 @@ function setupSummaryTool() {
   });
   clearBtn.addEventListener('click', () => {
     resultArea.value = '';
-    if (statusDisplay && statusDisplay.textContent === 'エラー発生') {
+    if (statusDisplay && statusDisplay.textContent === 'エラーが発生しました') {
       statusDisplay.style.display = 'none';
       statusDisplay.textContent = '';
     }
   });
+
+  // Markdown形式でコピー
+  const copyMdBtn = document.getElementById('copyMdBtn');
+  if (copyMdBtn) {
+    copyMdBtn.addEventListener('click', async () => {
+      statusDisplay.textContent = 'ページ内容を取得中...';
+      statusDisplay.style.display = 'block';
+      statusDisplay.style.color = 'var(--text-muted)';
+
+      try {
+        const data = await getActivePageData();
+        if (!data || !data.text || data.text.trim().length < 20) {
+          throw new Error('ページのテキスト内容が不足しているか、取得できませんでした。');
+        }
+
+        const mdText = `# ${data.title}\nURL: ${data.url}\n\n---\n\n${data.text}`;
+        await navigator.clipboard.writeText(mdText);
+
+        showToast('MD形式でコピーしました');
+        statusDisplay.textContent = 'コピー完了';
+        statusDisplay.style.color = 'var(--text-primary)';
+        setTimeout(() => {
+          if (statusDisplay.textContent === 'コピー完了') {
+            statusDisplay.style.display = 'none';
+          }
+        }, 3000);
+      } catch (e) {
+        console.error('MD Export Error:', e);
+        const friendlyMsg = getFriendlyErrorMessage(e);
+        resultArea.value = friendlyMsg;
+        showToast('内容を取得できませんでした');
+        statusDisplay.textContent = 'エラーが発生しました';
+        statusDisplay.style.color = 'var(--danger)';
+      }
+    });
+  }
+}
+
+async function getActivePageData() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab || !tab.id) return null;
+
+  // chrome:// や edge:// などのシステムページはスクリプト実行不可
+  if (tab.url.startsWith('chrome:') || tab.url.startsWith('edge:') || tab.url.startsWith('about:') || tab.url.startsWith('chrome-extension:')) {
+    throw new Error('SYSTEM_PAGE_RESTRICTED');
+  }
+
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => ({
+        title: document.title,
+        url: window.location.href,
+        text: document.body.innerText
+      })
+    });
+    return results[0]?.result;
+  } catch (err) {
+    console.error('Scripting Error:', err);
+    throw new Error('ページのテキスト内容を取得できませんでした。');
+  }
 }
 
 async function getActiveTabText() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab || !tab.id || tab.url.startsWith('chrome:')) return null;
-
-  const results = await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    func: () => document.body.innerText
-  });
-
-  return results[0]?.result;
+  const data = await getActivePageData();
+  return data ? data.text : null;
 }
 
 async function sendTextToGemini(text, apiKey, resultArea, statusDisplay, mode) {
