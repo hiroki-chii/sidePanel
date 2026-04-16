@@ -872,15 +872,6 @@ function showTabContextMenu(e, tabId) {
     },
     { divider: true },
     {
-      label: '他のタブを閉じる',
-      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>',
-      action: () => {
-        const otherTabs = state.tabs.filter((t) => t.id !== tabId && t.windowId === tab.windowId && !t.pinned);
-        otherTabs.forEach((t) => chrome.tabs.remove(t.id));
-      },
-      className: 'danger',
-    },
-    {
       label: 'タブを閉じる',
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>',
       action: () => closeTab(tabId),
@@ -1587,7 +1578,7 @@ async function sendTextToGemini(text, apiKey, resultArea, statusDisplay, mode) {
   let promptText = "";
   switch (mode) {
     case 'bullets':
-      promptText = "以下のウェブページの内容を、重要なポイントに絞って構造化された箇条書き（ネスト形式）でまとめてください。解説や挨拶は省き、本文のみを出力してください。\n\n内容:\n" + text;
+      promptText = "以下のウェブページの内容を、重要なポイントに絞って構造化された箇条書き（ネスト形式）でまとめてください。解説や前段の挨拶は省き、本文のみを出力してください。\n\n内容:\n" + text;
       break;
     case 'detailed':
       promptText = "以下のウェブページの内容を詳細に解説してください。背景、主要な主張、結論、および注目すべき詳細を含めて丁寧に説明してください。\n\n内容:\n" + text;
