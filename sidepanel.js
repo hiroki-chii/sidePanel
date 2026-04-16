@@ -21,6 +21,8 @@ const state = {
 const dom = {
   tabBtns: document.querySelectorAll('.tab-btn'),
   tabIndicator: document.querySelector('.tab-indicator'),
+  navBack: document.getElementById('navBack'),
+  navForward: document.getElementById('navForward'),
   addressInput: document.getElementById('addressInput'),
   tabsPanel: document.getElementById('tabsPanel'),
   bookmarksPanel: document.getElementById('bookmarksPanel'),
@@ -43,6 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupContextMenu();
   setupNewTabAction();
   setupTabListeners(); // タブのイベントリスナーを設定
+  updateNavButtonsStatus(); // ナビゲーションボタンの状態を初期更新
   loadTabs();
   await loadAppState(); // 保存された状態を読み込む
   switchTab(state.activeTab); // 保存されたタブに切り替え
@@ -70,15 +73,26 @@ function setupNewTabAction() {
 // ページナビゲーション（戻る・進む・リロード）
 // ===========================
 function setupNavigation() {
-  document.getElementById('navBack').addEventListener('click', async () => {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab) chrome.tabs.goBack(tab.id);
-  });
+  if (dom.navBack) {
+    dom.navBack.addEventListener('click', async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab) {
+        await chrome.tabs.goBack(tab.id);
+        // 少し待ってから状態を更新（ナビゲーション完了を待つため）
+        setTimeout(updateNavButtonsStatus, 100);
+      }
+    });
+  }
 
-  document.getElementById('navForward').addEventListener('click', async () => {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab) chrome.tabs.goForward(tab.id);
-  });
+  if (dom.navForward) {
+    dom.navForward.addEventListener('click', async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab) {
+        await chrome.tabs.goForward(tab.id);
+        setTimeout(updateNavButtonsStatus, 100);
+      }
+    });
+  }
 
   document.getElementById('navReload').addEventListener('click', async () => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -99,6 +113,57 @@ function setupNavigation() {
       chrome.windows.update(win.id, { state: 'fullscreen' });
     }
   });
+}
+
+/**
+ * 戻る・進むボタンの有効/無効状態を更新
+ */
+async function updateNavButtonsStatus() {
+  if (!dom.navBack || !dom.navForward) return;
+
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab || !tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('edge://')) {
+      // 制限されたページではスクリプト実行不可なので、安全のため無効化するか、
+      // あるいは判定不能として現在の状態を維持（ここでは安全のために一旦無効化）
+      dom.navBack.disabled = true;
+      dom.navForward.disabled = true;
+      return;
+    }
+
+    // Navigation APIを使用して状態を取得
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        return {
+          canGoBack: window.navigation ? window.navigation.canGoBack : false,
+          canGoForward: window.navigation ? window.navigation.canGoForward : false,
+          // Navigation APIが未サポートの場合のフォールバック
+          historyLength: window.history.length,
+          hasNavigation: !!window.navigation
+        };
+      }
+    });
+
+    if (results && results[0] && results[0].result) {
+      const { canGoBack, canGoForward, hasNavigation } = results[0].result;
+      
+      if (hasNavigation) {
+        dom.navBack.disabled = !canGoBack;
+        dom.navForward.disabled = !canGoForward;
+      } else {
+        // Navigation APIが使えない古いブラウザ等の場合（一応のケア）
+        // history.length だけでは正確な位置が分からないため、常に有効にしておくか
+        // 独自のトラッキングが必要だが、現在のChromeであれば基本問題ない
+        dom.navBack.disabled = false;
+        dom.navForward.disabled = false;
+      }
+    }
+  } catch (error) {
+    // スクリプト実行失敗（セキュリティ制限ページなど）
+    dom.navBack.disabled = true;
+    dom.navForward.disabled = true;
+  }
 }
 
 // ===========================
@@ -295,6 +360,7 @@ function setupTabListeners() {
     // 現在のアクティブタブが更新されたらアドレスバーも合わせる
     if (tab.active) {
       updateAddressBar();
+      updateNavButtonsStatus(); // 戻る・進むボタンの状態も更新
     }
   });
 
@@ -302,6 +368,7 @@ function setupTabListeners() {
   chrome.tabs.onActivated.addListener(async () => {
     await loadTabs();
     updateAddressBar(); // アドレスバーとブックマークボタンの状態を更新
+    updateNavButtonsStatus(); // 戻る・進むボタンの状態も更新
   });
 }
 

@@ -182,6 +182,12 @@ body {
   transform: scale(0.92);
 }
 
+.nav-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
+
 .nav-btn svg {
   width: 16px;
   height: 16px;
