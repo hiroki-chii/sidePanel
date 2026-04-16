@@ -1092,12 +1092,40 @@ function setupSettings() {
   });
 
   // APIキーを保存
-  saveKeyBtn.addEventListener('click', () => {
+  saveKeyBtn.addEventListener('click', async () => {
     const key = apiKeyInput.value.trim();
-    chrome.storage.local.set({ geminiApiKey: key }, () => {
-      showToast('APIキーを保存しました');
-      settingsContainer.classList.add('hidden');
-    });
+    
+    if (!key) {
+      chrome.storage.local.set({ geminiApiKey: '' }, () => {
+        showToast('APIキーを削除しました');
+        settingsContainer.classList.add('hidden');
+      });
+      return;
+    }
+
+    saveKeyBtn.disabled = true;
+    const originalText = saveKeyBtn.textContent;
+    saveKeyBtn.textContent = '確認中...';
+
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw { status: response.status, message: data.error?.message || 'API Error' };
+      }
+
+      chrome.storage.local.set({ geminiApiKey: key }, () => {
+        alert('APIキーは有効です。正常に保存されました。');
+        showToast('APIキーを保存しました');
+        settingsContainer.classList.add('hidden');
+      });
+    } catch (e) {
+      alert(getFriendlyErrorMessage(e));
+    } finally {
+      saveKeyBtn.disabled = false;
+      saveKeyBtn.textContent = originalText;
+    }
   });
 
   // 外側をクリックしたら閉じる（任意）
@@ -1106,6 +1134,39 @@ function setupSettings() {
       settingsContainer.classList.add('hidden');
     }
   });
+
+  // 利用可能なモデルの確認
+  const checkModelsBtn = document.getElementById('checkModelsBtn');
+  if (checkModelsBtn) {
+    checkModelsBtn.addEventListener('click', async () => {
+      chrome.storage.local.get(['geminiApiKey'], async (result) => {
+        const apiKey = result.geminiApiKey;
+        if (!apiKey) {
+          showToast('Gemini APIキーを入力して保存してください。');
+          return;
+        }
+        showToast('モデル一覧を取得中...');
+        try {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+          const data = await response.json();
+          if (!response.ok) {
+            throw { status: response.status, message: data.error?.message || 'API Error' };
+          }
+          if (data.models) {
+            const names = data.models
+              .filter(m => m.supportedGenerationMethods?.includes('generateContent'))
+              .map(m => m.name.replace('models/', ''))
+              .join('\n');
+            alert("利用可能なモデル一覧:\n" + names);
+          } else {
+            alert("モデルが見つかりませんでした。");
+          }
+        } catch (e) {
+          alert(getFriendlyErrorMessage(e));
+        }
+      });
+    });
+  }
 }
 
 // ===========================
@@ -1149,35 +1210,6 @@ function setupVoiceTool() {
   voiceModeSelect.addEventListener('change', () => {
     chrome.storage.local.set({ voiceMode: voiceModeSelect.value });
   });
-
-  // 利用可能なモデルの確認
-  const checkModelsBtn = document.getElementById('checkModelsBtn');
-  if (checkModelsBtn) {
-    checkModelsBtn.addEventListener('click', async () => {
-      const result = await chrome.storage.local.get(['geminiApiKey']);
-      const apiKey = result.geminiApiKey;
-      if (!apiKey) {
-        resultArea.value = '設定（歯車アイコン）からGemini APIキーを入力して保存してください。';
-        return;
-      }
-      resultArea.value = 'モデル一覧を取得中...';
-      try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-        const data = await response.json();
-        if (data.models) {
-          const names = data.models
-            .filter(m => m.supportedGenerationMethods.includes('generateContent'))
-            .map(m => m.name.replace('models/', ''))
-            .join('\n');
-          resultArea.value = "利用可能なモデル一覧:\n" + names;
-        } else {
-          resultArea.value = "モデルが見つかりませんでした:\n" + JSON.stringify(data);
-        }
-      } catch (e) {
-        resultArea.value = "通信エラー: " + e.message;
-      }
-    });
-  }
 
   // コピーボタンの処理
   const copyBtn = document.getElementById('copyResultBtn');
@@ -1354,7 +1386,7 @@ function getFriendlyErrorMessage(error) {
   const status = error.status;
 
   if (status === 401 || status === 403 || message.includes('invalid') || message.includes('api_key') || message.includes('not valid')) {
-    return '【エラー】APIキーが無効です。「確認」ボタンでキーの状態をチェックするか、正しいキーを保存し直してください。';
+    return '【エラー】APIキーが無効です。正しいAPIキーを入力してください。';
   }
   if (status === 429 || message.includes('quota') || message.includes('too many requests')) {
     return '【エラー】リクエスト上限に達しました。しばらく時間を置いてから再度お試しください。';
