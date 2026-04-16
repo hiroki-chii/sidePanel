@@ -1402,7 +1402,7 @@ function getFriendlyErrorMessage(error) {
 }
 
 async function sendToGemini(base64Audio, apiKey, resultArea, statusDisplay, mode) {
-  const modelId = "gemini-3-flash-preview";
+  const modelId = "gemini-3.1-flash-lite-preview";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
 
   // 品質チェック用の共通指示
@@ -1557,7 +1557,7 @@ async function getActiveTabText() {
 }
 
 async function sendTextToGemini(text, apiKey, resultArea, statusDisplay, mode) {
-  const modelId = "gemini-3-flash-preview";
+  const modelId = "gemini-3.1-flash-lite-preview";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
 
   let promptText = "";
