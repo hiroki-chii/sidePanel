@@ -1228,6 +1228,10 @@ function setupVoiceTool() {
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
       resultArea.value = '';
+      if (statusDisplay && statusDisplay.textContent === 'エラー発生') {
+        statusDisplay.textContent = '待機中';
+        statusDisplay.style.color = 'var(--text-muted, #666)';
+      }
     });
   }
 
@@ -1541,7 +1545,13 @@ function setupSummaryTool() {
       showToast('クリップボードにコピーしました');
     }
   });
-  clearBtn.addEventListener('click', () => { resultArea.value = ''; });
+  clearBtn.addEventListener('click', () => {
+    resultArea.value = '';
+    if (statusDisplay && statusDisplay.textContent === 'エラー発生') {
+      statusDisplay.style.display = 'none';
+      statusDisplay.textContent = '';
+    }
+  });
 }
 
 async function getActiveTabText() {
