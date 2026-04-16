@@ -1298,6 +1298,10 @@ function setupVoiceTool() {
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
       resultArea.value = '';
+      const previewArea = document.getElementById('voicePreviewArea');
+      if (previewArea) {
+        previewArea.innerHTML = '';
+      }
       if (statusDisplay && statusDisplay.textContent === 'エラーが発生しました') {
         statusDisplay.textContent = '待機中';
         statusDisplay.style.color = 'var(--text-muted, #666)';
@@ -1493,20 +1497,20 @@ async function sendToGemini(base64Audio, apiKey, resultArea, statusDisplay, mode
   let promptText = "";
   switch (mode) {
     case 'summary':
-      promptText = "提供された音声を解析し、内容の要点を簡潔にまとめてください。主要なポイントを構造化された箇条書きで出力してください。挨拶や解説は不要です。" + qualityInstruction;
+      promptText = "提供された音声を解析し、内容の要点を簡潔にまとめてください。主要なポイントを構造化されたMarkdown形式の箇条書きで出力してください。挨拶や解説は不要です。" + qualityInstruction;
       break;
     case 'business':
-      promptText = "提供された音声の内容を、ビジネスシーンでそのまま使える丁寧な敬語（です・ます調）の文章に変換してください。論理構成を整え、必要に応じて感謝の言葉などを補いつつ、自然なビジネス文書（メールや報告書）の形式で出力してください。解説は不要です。" + qualityInstruction;
+      promptText = "提供された音声の内容を、ビジネスシーンでそのまま使える丁寧な敬語（です・ます調）の文章に変換してください。論理構成を整え、Markdown形式（見出しや引用を適宜使用）で自然なビジネス文書の形式で出力してください。解説は不要です。" + qualityInstruction;
       break;
     case 'minutes':
-      promptText = "提供された音声から詳細な議事録を作成してください。以下の項目を含めて整理してください：\n1. 内容の要旨\n2. 決定事項\n3. ネクストアクション（課題）\n項目ごとに分かりやすく構造化し、挨拶や余計な解説を省いて出力してください。" + qualityInstruction;
+      promptText = "提供された音声から詳細なMarkdown形式の議事録を作成してください。以下の項目を含めて整理してください：\n1. 内容の要旨\n2. 決定事項\n3. ネクストアクション（課題）\n項目ごとに分かりやすく構造化し、挨拶や余計な解説を省いて出力してください。" + qualityInstruction;
       break;
     case 'bullets':
-      promptText = "提供された音声の内容をすべて網羅的に箇条書きに分解して整理してください。情報の階層構造（親子関係）を意識して、論理的にネストされたリスト形式で出力してください。解説は不要です。" + qualityInstruction;
+      promptText = "提供された音声の内容をすべて網羅的に箇条書きに分解して整理してください。情報の階層構造（親子関係）を意識して、論理的にネストされたMarkdown形式のリスト形式で出力してください。解説は不要です。" + qualityInstruction;
       break;
     case 'standard':
     default:
-      promptText = "提供された音声を解析して、論理的で自然な文章に整えてください。「えー」「あのー」などのフィラーを取り除き、文脈を補完して読みやすくしてください。挨拶や余計な解説を省き、コピーしてすぐに使える状態で出力してください。" + qualityInstruction;
+      promptText = "提供された音声を解析して、論理的で自然な文章に整えてください。「えー」「あのー」などのフィラーを取り除き、文脈を補完して読みやすくしてください。挨拶や余計な解説を省き、Markdown形式（改行や強調を適切に使用）で出力してください。" + qualityInstruction;
       break;
   }
 
@@ -1545,6 +1549,7 @@ async function sendToGemini(base64Audio, apiKey, resultArea, statusDisplay, mode
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
 
   resultArea.value = text;
+  updateMarkdownPreview(resultArea.id.includes('voice') ? 'voice' : 'summary');
 
   statusDisplay.textContent = '完了';
   statusDisplay.style.color = 'var(--text-color, #333)';
@@ -1624,6 +1629,10 @@ function setupSummaryTool() {
   });
   clearBtn.addEventListener('click', () => {
     resultArea.value = '';
+    const previewArea = document.getElementById('summaryPreviewArea');
+    if (previewArea) {
+      previewArea.innerHTML = '';
+    }
     if (statusDisplay && statusDisplay.textContent === 'エラーが発生しました') {
       statusDisplay.style.display = 'none';
       statusDisplay.textContent = '';
@@ -1705,14 +1714,14 @@ async function sendTextToGemini(text, apiKey, resultArea, statusDisplay, mode) {
   let promptText = "";
   switch (mode) {
     case 'bullets':
-      promptText = "以下のウェブページの内容を、重要なポイントに絞って構造化された箇条書き（ネスト形式）でまとめてください。解説や前段の挨拶は省き、本文のみを出力してください。\n\n内容:\n" + text;
+      promptText = "以下のウェブページの内容を、重要なポイントに絞って構造化されたMarkdown形式の箇条書き（ネスト形式）でまとめてください。解説や前段の挨拶は省き、本文のみを出力してください。\n\n内容:\n" + text;
       break;
     case 'detailed':
-      promptText = "以下のウェブページの内容を詳細に解説してください。背景、主要な主張、結論、および注目すべき詳細を含めて丁寧に説明してください。\n\n内容:\n" + text;
+      promptText = "以下のウェブページの内容を詳細にMarkdown形式で解説してください。見出し、強調、リスト等を使用して背景、主要な主張、結論、および注目すべき詳細を含めて丁寧に説明してください。\n\n内容:\n" + text;
       break;
     case 'summary':
     default:
-      promptText = "以下のウェブページの内容を簡潔に要約してください。全体像がひと目で分かるようにまとめてください。\n\n内容:\n" + text;
+      promptText = "以下のウェブページの内容をMarkdown形式で簡潔に要約してください。全体像がひと目で分かるようにまとめ、改行や強調を適切に使用してください。\n\n内容:\n" + text;
       break;
   }
 
@@ -1734,7 +1743,90 @@ async function sendTextToGemini(text, apiKey, resultArea, statusDisplay, mode) {
   const data = await response.json();
   const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
   resultArea.value = resultText;
+  updateMarkdownPreview('summary');
   statusDisplay.textContent = '完了';
   statusDisplay.style.color = 'var(--text-primary)';
   setTimeout(() => { statusDisplay.style.display = 'none'; }, 3000);
 }
+
+// ===========================
+// マークダウン・ビューアー共有ロジック
+// ===========================
+
+/**
+ * プレビューの更新
+ */
+function updateMarkdownPreview(group) {
+  const resultArea = document.getElementById(group === 'voice' ? 'voiceResultArea' : 'summaryResultArea');
+  const previewArea = document.getElementById(group === 'voice' ? 'voicePreviewArea' : 'summaryPreviewArea');
+  
+  if (!resultArea || !previewArea) return;
+  
+  const markdown = resultArea.value;
+  // marked が読み込まれているか確認
+  if (typeof marked !== 'undefined') {
+    previewArea.innerHTML = marked.parse(markdown);
+  } else {
+    // フォールバック
+    previewArea.innerText = markdown;
+  }
+}
+
+/**
+ * 出力タブの切り替え
+ */
+function setupOutputTabs() {
+  const tabs = document.querySelectorAll('.output-tab');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const mode = tab.dataset.mode;
+      const group = tab.dataset.group;
+      const targetId = tab.dataset.target;
+      
+      // 同じグループのタブのアクティブ状態を更新
+      document.querySelectorAll(`.output-tab[data-group="${group}"]`).forEach(t => {
+        t.classList.toggle('active', t === tab);
+      });
+      
+      // テキストエリアとプレビューの表示切替
+      const resultArea = document.getElementById(group === 'voice' ? 'voiceResultArea' : 'summaryResultArea');
+      const previewArea = document.getElementById(group === 'voice' ? 'voicePreviewArea' : 'summaryPreviewArea');
+      
+      if (mode === 'edit') {
+        resultArea.classList.remove('hidden');
+        previewArea.classList.add('hidden');
+      } else {
+        updateMarkdownPreview(group);
+        resultArea.classList.add('hidden');
+        previewArea.classList.remove('hidden');
+      }
+    });
+  });
+}
+
+// 初期化時にタブセットアップを追加
+// 既に DOMContentLoaded 內で setupVoiceTool と setupSummaryTool を呼んでいるので、
+// それらの関数內で呼ぶか、個別に初期化します。
+document.addEventListener('DOMContentLoaded', () => {
+  // marked の初期設定
+  if (typeof marked !== 'undefined') {
+    marked.setOptions({
+      gfm: true,
+      breaks: true,
+      headerIds: false,
+      mangle: false
+    });
+  }
+
+  setupOutputTabs();
+  
+  // 要約や音声入力のテキストエリアが変更されたらプレビューも更新するようにイベントバインド
+  ['voiceResultArea', 'summaryResultArea'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', () => {
+        updateMarkdownPreview(id.includes('voice') ? 'voice' : 'summary');
+      });
+    }
+  });
+});

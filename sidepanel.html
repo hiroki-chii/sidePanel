@@ -226,7 +226,16 @@
                 </button>
               </div>
             </div>
-            <textarea id="voiceResultArea" rows="5" placeholder="認識結果やAIの回答がここに表示されます..." style="width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-primary); padding: 12px; resize: vertical; box-sizing: border-box; font-size: 13px; line-height: 1.6; outline: none;"></textarea>
+            <div class="output-container">
+              <div class="output-header">
+                <div class="output-tabs">
+                  <button class="output-tab active" data-mode="edit" data-target="voiceResultArea" data-group="voice">編集</button>
+                  <button class="output-tab" data-mode="preview" data-target="voicePreviewArea" data-group="voice">表示</button>
+                </div>
+              </div>
+              <textarea id="voiceResultArea" rows="5" placeholder="認識結果やAIの回答がここに表示されます..." style="width: 100%; border-radius: 0 0 var(--radius-md) var(--radius-md); border: 1px solid var(--border); border-top: none; background: var(--bg-tertiary); color: var(--text-primary); padding: 12px; resize: vertical; box-sizing: border-box; font-size: 13px; line-height: 1.6; outline: none;"></textarea>
+              <div id="voicePreviewArea" class="markdown-body hidden" style="width: 100%; min-height: 100px; max-height: 400px; overflow-y: auto; border-radius: 0 0 var(--radius-md) var(--radius-md); border: 1px solid var(--border); border-top: none; background: var(--bg-tertiary); color: var(--text-primary); padding: 12px; box-sizing: border-box; font-size: 13px; line-height: 1.6;"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -287,13 +296,23 @@
                 <span>クリア</span>
               </button>
             </div>
-            <textarea id="summaryResultArea" rows="8" placeholder="要約結果がここに表示されます..." style="width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-primary); padding: 12px; resize: vertical; box-sizing: border-box; font-size: 13px; line-height: 1.6; outline: none;"></textarea>
+            <div class="output-container">
+              <div class="output-header">
+                <div class="output-tabs">
+                  <button class="output-tab active" data-mode="edit" data-target="summaryResultArea" data-group="summary">編集</button>
+                  <button class="output-tab" data-mode="preview" data-target="summaryPreviewArea" data-group="summary">表示</button>
+                </div>
+              </div>
+              <textarea id="summaryResultArea" rows="8" placeholder="要約結果がここに表示されます..." style="width: 100%; border-radius: 0 0 var(--radius-md) var(--radius-md); border: 1px solid var(--border); border-top: none; background: var(--bg-tertiary); color: var(--text-primary); padding: 12px; resize: vertical; box-sizing: border-box; font-size: 13px; line-height: 1.6; outline: none;"></textarea>
+              <div id="summaryPreviewArea" class="markdown-body hidden" style="width: 100%; min-height: 150px; max-height: 500px; overflow-y: auto; border-radius: 0 0 var(--radius-md) var(--radius-md); border: 1px solid var(--border); border-top: none; background: var(--bg-tertiary); color: var(--text-primary); padding: 12px; box-sizing: border-box; font-size: 13px; line-height: 1.6;"></div>
+            </div>
           </div>
         </div>
       </div>
     </section>
   </main>
 
+  <script src="marked.min.js"></script>
   <script src="sidepanel.js"></script>
 </body>
 </html>
