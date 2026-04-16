@@ -1068,15 +1068,27 @@ function setupSettings() {
   const settingsContainer = document.getElementById('settingsContainer');
   const apiKeyInput = document.getElementById('geminiApiKey');
   const saveKeyBtn = document.getElementById('saveApiKeyBtn');
+  const modelSelect = document.getElementById('geminiModelSelect');
 
   if (!settingsBtn || !settingsContainer || !apiKeyInput || !saveKeyBtn) return;
 
-  // 保存されているAPIキーを読み込む
-  chrome.storage.local.get(['geminiApiKey'], (result) => {
+  // 保存されているAPIキーとモデルを読み込む
+  chrome.storage.local.get(['geminiApiKey', 'geminiModel'], (result) => {
     if (result.geminiApiKey) {
       apiKeyInput.value = result.geminiApiKey;
     }
+    if (result.geminiModel && modelSelect) {
+      modelSelect.value = result.geminiModel;
+    }
   });
+
+  // モデルの変更を即時保存
+  if (modelSelect) {
+    modelSelect.addEventListener('change', () => {
+      chrome.storage.local.set({ geminiModel: modelSelect.value });
+      showToast('モデル設定を保存しました');
+    });
+  }
 
   // 設定ボタンのクリックで表示/非表示を切り替え
   settingsBtn.addEventListener('click', () => {
@@ -1094,7 +1106,7 @@ function setupSettings() {
   // APIキーを保存
   saveKeyBtn.addEventListener('click', async () => {
     const key = apiKeyInput.value.trim();
-    
+
     if (!key) {
       chrome.storage.local.set({ geminiApiKey: '' }, () => {
         showToast('APIキーを削除しました');
@@ -1110,7 +1122,7 @@ function setupSettings() {
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw { status: response.status, message: data.error?.message || 'API Error' };
       }
@@ -1396,7 +1408,7 @@ function getFriendlyErrorMessage(error) {
     return '【エラー】リクエスト上限に達しました。しばらく時間を置いてから再度お試しください。';
   }
   if (status === 503 || message.includes('overloaded') || message.includes('high demand') || message.includes('temporarily unavailable') || message.includes('experiencing high demand')) {
-    return '【エラー】AIモデルが現在大変混み合っています。少し時間を空けてから再度お試しください。';
+    return '【エラー】AIモデルが現在大変混み合っています。少し時間を空けるか、モデルを変更してから再度お試しください。';
   }
   if (message.includes('network') || message.includes('fetch')) {
     return '【エラー】ネットワーク接続に問題があります。インターネット接続を確認してください。';
@@ -1406,7 +1418,8 @@ function getFriendlyErrorMessage(error) {
 }
 
 async function sendToGemini(base64Audio, apiKey, resultArea, statusDisplay, mode) {
-  const modelId = "gemini-3.1-flash-lite-preview";
+  const resultObj = await chrome.storage.local.get(['geminiModel']);
+  const modelId = resultObj.geminiModel || "gemini-3.1-flash-lite-preview";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
 
   // 品質チェック用の共通指示
@@ -1567,7 +1580,8 @@ async function getActiveTabText() {
 }
 
 async function sendTextToGemini(text, apiKey, resultArea, statusDisplay, mode) {
-  const modelId = "gemini-3.1-flash-lite-preview";
+  const resultObj = await chrome.storage.local.get(['geminiModel']);
+  const modelId = resultObj.geminiModel || "gemini-3.1-flash-lite-preview";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
 
   let promptText = "";
