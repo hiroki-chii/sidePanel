@@ -1435,6 +1435,68 @@ function setupVoiceTool() {
   let isRecording = false;
   let isVoiceCancelled = false;
   let recordingStartTime = 0;
+  let audioCtx = null;
+  let analyser = null;
+  let animationId = null;
+
+  const gaugeContainer = document.getElementById('voiceVolumeGaugeContainer');
+  const gaugeBar = document.getElementById('voiceVolumeGaugeBar');
+
+  function startVisualizer(stream) {
+    try {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      analyser = audioCtx.createAnalyser();
+      const source = audioCtx.createMediaStreamSource(stream);
+      source.connect(analyser);
+      analyser.fftSize = 256;
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      gaugeContainer.classList.remove('hidden');
+
+      function updateGauge() {
+        if (!analyser) return;
+        analyser.getByteFrequencyData(dataArray);
+
+        // 音量の平均値を計算
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          sum += dataArray[i];
+        }
+        const average = sum / bufferLength;
+        
+        // スケールに変換（感度調整：128で最大。声の大きさで調整）
+        const scale = Math.min(average / 100, 1.2); 
+        gaugeBar.style.transform = `scaleX(${scale})`;
+
+        animationId = requestAnimationFrame(updateGauge);
+      }
+      updateGauge();
+    } catch (err) {
+      console.error('Visualizer error:', err);
+    }
+  }
+
+  function stopVisualizer() {
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+    if (gaugeBar) {
+      gaugeBar.style.transform = 'scaleX(0)';
+    }
+    if (gaugeContainer) {
+      gaugeContainer.classList.add('hidden');
+    }
+    analyser = null;
+  }
 
   const cancelBtn = document.getElementById('cancelVoiceBtn');
   if (cancelBtn) {
@@ -1485,6 +1547,7 @@ function setupVoiceTool() {
           cancelBtn.classList.add('hidden');
           copyBtn.classList.remove('hidden');
           if (clearBtn) clearBtn.classList.remove('hidden');
+          stopVisualizer();
 
           if (isVoiceCancelled) {
             statusDisplay.textContent = '中止しました';
@@ -1527,6 +1590,7 @@ function setupVoiceTool() {
         mediaRecorder.start();
         isRecording = true;
         recordingStartTime = Date.now();
+        startVisualizer(stream);
 
         // 録音中の見た目
         voiceBtn.style.backgroundColor = 'red';
