@@ -558,26 +558,99 @@ body {
   height: 14px;
 }
 
-/* 音声インジケーター */
-.tab-item .audio-indicator {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  color: var(--accent);
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
 /* ピン留めバッジ */
 .tab-item .pin-badge {
   width: 12px;
   height: 12px;
   flex-shrink: 0;
   color: var(--warning);
+}
+
+/* ボリュームコントロール */
+.tab-item .volume-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition: all var(--transition-fast);
+  margin-left: auto;
+  padding-right: 4px;
+}
+
+/* 再生中または調整済みのタブに表示 */
+.tab-item.show-volume .volume-control {
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+}
+
+/* ミュートボタン */
+.tab-item .mute-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.tab-item .mute-btn:hover {
+  background: var(--accent-glow);
+}
+
+.tab-item .mute-btn.is-muted {
+  color: var(--text-muted);
+}
+
+.tab-item .mute-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.tab-item .volume-slider {
+  width: 50px;
+  height: 4px;
+  -webkit-appearance: none;
+  background: var(--bg-tertiary);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  padding: 0;
+  margin: 0;
+}
+
+.tab-item .volume-slider:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.tab-item .volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 2px rgba(0,0,0,0.2);
+  transition: transform var(--transition-fast);
+}
+
+.tab-item .volume-slider:disabled::-webkit-slider-thumb {
+  background: var(--text-muted);
+  cursor: default;
+}
+
+.tab-item .volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
 }
 
 /* ===========================
