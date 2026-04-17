@@ -617,13 +617,14 @@ function createTabItemHTML(tab) {
   const volume = state.tabVolumes[tab.id] !== undefined ? state.tabVolumes[tab.id] : 100;
   const shouldShowVolume = tab.audible || isMuted || volume !== 100;
   const showVolumeClass = shouldShowVolume ? ' show-volume' : '';
+  const mutedPlayingClass = (isMuted && tab.audible) ? ' muted-playing' : '';
 
   const muteIcon = isMuted
     ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6"/></svg>`
     : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>`;
 
   return `
-    <div class="tab-item${currentClass}${showVolumeClass}" data-tab-id="${tab.id}" data-window-id="${tab.windowId}" data-index="${tab.index}" draggable="true">
+    <div class="tab-item${currentClass}${showVolumeClass}${mutedPlayingClass}" data-tab-id="${tab.id}" data-window-id="${tab.windowId}" data-index="${tab.index}" draggable="true">
       ${faviconHTML}
       <div class="tab-item-info">
         <div class="tab-item-title">${escapeHTML(tab.title || '新しいタブ')}</div>

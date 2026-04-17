@@ -121,13 +121,16 @@ body {
 ::-webkit-scrollbar {
   width: 5px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: var(--text-muted);
   border-radius: 10px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
 }
@@ -396,6 +399,7 @@ body {
     opacity: 0;
     transform: translateY(4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -610,6 +614,26 @@ body {
   color: var(--text-muted);
 }
 
+/* ミュート中だが再生中の場合のアニメーション */
+.tab-item.muted-playing .mute-btn {
+  color: var(--accent);
+  animation: pulse-mute 1.5s infinite;
+}
+
+@keyframes pulse-mute {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+
 .tab-item .mute-btn svg {
   width: 14px;
   height: 14px;
@@ -640,7 +664,7 @@ body {
   background: var(--accent);
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 0 2px rgba(0,0,0,0.2);
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
   transition: transform var(--transition-fast);
 }
 
@@ -721,7 +745,7 @@ body {
   transition: transform var(--transition-base);
 }
 
-.bookmark-folder.open > .bookmark-folder-header .folder-chevron {
+.bookmark-folder.open>.bookmark-folder-header .folder-chevron {
   transform: rotate(90deg);
 }
 
@@ -732,7 +756,7 @@ body {
   color: var(--warning);
 }
 
-.bookmark-folder.open > .bookmark-folder-header .folder-icon {
+.bookmark-folder.open>.bookmark-folder-header .folder-icon {
   color: var(--accent);
 }
 
@@ -761,7 +785,7 @@ body {
   overflow: hidden;
 }
 
-.bookmark-folder.open > .bookmark-folder-children {
+.bookmark-folder.open>.bookmark-folder-children {
   display: block;
   animation: expandIn var(--transition-slow) ease;
 }
@@ -771,6 +795,7 @@ body {
     opacity: 0;
     max-height: 0;
   }
+
   to {
     opacity: 1;
     max-height: 2000px;
@@ -883,9 +908,17 @@ body {
 }
 
 @keyframes shimmer {
-  0% { opacity: 0.5; }
-  50% { opacity: 1; }
-  100% { opacity: 0.5; }
+  0% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.5;
+  }
 }
 
 /* ===========================
@@ -908,6 +941,7 @@ body {
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -1053,12 +1087,12 @@ body {
   border-radius: 50%;
 }
 
-input:checked + .toggle-slider {
+input:checked+.toggle-slider {
   background-color: var(--accent);
   border-color: var(--accent);
 }
 
-input:checked + .toggle-slider:before {
+input:checked+.toggle-slider:before {
   transform: translateX(16px);
   background-color: #fff;
 }
@@ -1082,7 +1116,7 @@ input:checked + .toggle-slider:before {
   box-shadow: inset 0 -2px 0 var(--accent);
 }
 
-.bookmark-folder.drag-over-into > .bookmark-folder-header {
+.bookmark-folder.drag-over-into>.bookmark-folder-header {
   background: var(--accent-subtle);
   outline: 1px dashed var(--accent);
 }
@@ -1163,8 +1197,15 @@ input:checked + .toggle-slider:before {
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .settings-panel-header {
@@ -1206,11 +1247,13 @@ input:checked + .toggle-slider:before {
 /* ===========================
    要約ツール・音声ツール共通
    =========================== */
-#voiceMode:hover, #summaryMode:hover {
+#voiceMode:hover,
+#summaryMode:hover {
   border-color: var(--accent) !important;
 }
 
-#voiceMode:focus, #summaryMode:focus {
+#voiceMode:focus,
+#summaryMode:focus {
   border-color: var(--accent) !important;
   box-shadow: 0 0 0 2px var(--accent-glow);
 }
@@ -1275,9 +1318,9 @@ input:checked + .toggle-slider:before {
   user-select: text;
 }
 
-.markdown-body h1, 
-.markdown-body h2, 
-.markdown-body h3, 
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
 .markdown-body h4 {
   margin-top: 24px;
   margin-bottom: 16px;
@@ -1286,19 +1329,21 @@ input:checked + .toggle-slider:before {
   color: var(--text-primary);
 }
 
-.markdown-body h1 { 
-  font-size: 1.5em; 
+.markdown-body h1 {
+  font-size: 1.5em;
   padding-bottom: 0.3em;
-  border-bottom: 1px solid var(--border); 
+  border-bottom: 1px solid var(--border);
 }
 
-.markdown-body h2 { 
-  font-size: 1.3em; 
+.markdown-body h2 {
+  font-size: 1.3em;
   padding-bottom: 0.3em;
-  border-bottom: 1px solid var(--border); 
+  border-bottom: 1px solid var(--border);
 }
 
-.markdown-body h3 { font-size: 1.1em; }
+.markdown-body h3 {
+  font-size: 1.1em;
+}
 
 .markdown-body p {
   margin-top: 0;
@@ -1306,7 +1351,7 @@ input:checked + .toggle-slider:before {
 }
 
 /* リストスタイルの明示的な定義 */
-.markdown-body ul, 
+.markdown-body ul,
 .markdown-body ol {
   padding-left: 24px !important;
   margin-top: 0;
@@ -1322,9 +1367,9 @@ input:checked + .toggle-slider:before {
   list-style-type: decimal !important;
 }
 
-.markdown-body ul ul, 
-.markdown-body ul ol, 
-.markdown-body ol ol, 
+.markdown-body ul ul,
+.markdown-body ul ol,
+.markdown-body ol ol,
 .markdown-body ol ul {
   margin-top: 0;
   margin-bottom: 0;
@@ -1336,7 +1381,7 @@ input:checked + .toggle-slider:before {
   line-height: 1.6;
 }
 
-.markdown-body li > p {
+.markdown-body li>p {
   margin-top: 8px;
 }
 
