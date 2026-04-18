@@ -1225,11 +1225,13 @@ function getDisplayUrl(url) {
 function loadToolsSettings() {
   const toggleXSidebar = document.getElementById('toggleXSidebar');
   const toggleYtShortsAutoScroll = document.getElementById('toggleYtShortsAutoScroll');
+  const toggleAiEnterGuard = document.getElementById('toggleAiEnterGuard');
 
-  // 初期値の読み込み
-  chrome.storage.local.get({ hideXSidebar: false, autoScrollYtShorts: false }, (result) => {
+  // 初期値の読み込み（aiEnterGuardはデフォルトON）
+  chrome.storage.local.get({ hideXSidebar: false, autoScrollYtShorts: false, aiEnterGuard: true }, (result) => {
     if (toggleXSidebar) toggleXSidebar.checked = result.hideXSidebar;
     if (toggleYtShortsAutoScroll) toggleYtShortsAutoScroll.checked = result.autoScrollYtShorts;
+    if (toggleAiEnterGuard) toggleAiEnterGuard.checked = result.aiEnterGuard;
   });
 
   // 変更の保存
@@ -1238,6 +1240,9 @@ function loadToolsSettings() {
   }
   if (toggleYtShortsAutoScroll) {
     toggleYtShortsAutoScroll.addEventListener('change', (e) => chrome.storage.local.set({ autoScrollYtShorts: e.target.checked }));
+  }
+  if (toggleAiEnterGuard) {
+    toggleAiEnterGuard.addEventListener('change', (e) => chrome.storage.local.set({ aiEnterGuard: e.target.checked }));
   }
 }
 

@@ -298,8 +298,39 @@
       behavior.onCtrlEnter(event);
     }
   }
+  // chrome.storage の設定に応じてリスナーを登録/解除
+  let isEnabled = false;
 
-  // 無条件に有効化（拡張機能の有効/無効に連動）
-  document.addEventListener("keydown", handleCtrlEnter, { capture: true });
+  function enable() {
+    if (!isEnabled) {
+      document.addEventListener("keydown", handleCtrlEnter, { capture: true });
+      isEnabled = true;
+    }
+  }
+
+  function disable() {
+    if (isEnabled) {
+      document.removeEventListener("keydown", handleCtrlEnter, { capture: true });
+      isEnabled = false;
+    }
+  }
+
+  // 初期値の読み込み（デフォルトON）
+  chrome.storage.local.get({ aiEnterGuard: true }, (result) => {
+    if (result.aiEnterGuard) {
+      enable();
+    }
+  });
+
+  // 設定変更を監視
+  chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === "local" && changes.aiEnterGuard) {
+      if (changes.aiEnterGuard.newValue) {
+        enable();
+      } else {
+        disable();
+      }
+    }
+  });
 
 })();
