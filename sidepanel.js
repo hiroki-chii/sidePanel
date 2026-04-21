@@ -1836,6 +1836,25 @@ function setupSummaryTool() {
   const copyMdBtn = document.getElementById('copyMdBtn');
   if (copyMdBtn) {
     copyMdBtn.addEventListener('click', async () => {
+      // システムページ制限の事前チェック
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && (tab.url.startsWith('chrome:') || tab.url.startsWith('edge:') || tab.url.startsWith('about:') || tab.url.startsWith('chrome-extension:'))) {
+        const friendlyMsg = '【制限】セキュリティ制限により取得できません。通常のウェブサイトで実行してください。';
+        resultArea.value = friendlyMsg;
+        showToast('内容を取得できませんでした');
+        statusDisplay.textContent = 'エラーが発生しました';
+        statusDisplay.style.display = 'block';
+        statusDisplay.style.color = 'var(--danger)';
+        return;
+      }
+
+      const confirmMsg = "ページの一部が読み込まれていない場合、全文がコピーされないことがあります。\n\n" +
+                         "無限スクロールを採用しているSNS（X、Facebook）や、表示に合わせてコンテンツを読み込むニュースサイト、" +
+                         "やり取りの長くなったAIチャット（ChatGPT、Claude等）などでは、一番下までスクロールして全てのコンテンツを表示させてから実行することを推奨します。\n\n" +
+                         "コピーを続行しますか？";
+      
+      if (!window.confirm(confirmMsg)) return;
+
       statusDisplay.textContent = 'ページ内容を取得中...';
       statusDisplay.style.display = 'block';
       statusDisplay.style.color = 'var(--text-muted)';
