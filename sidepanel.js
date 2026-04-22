@@ -497,16 +497,16 @@ function renderTabs() {
     // タブ全体でのマウスホイール調整
     el.addEventListener('wheel', (e) => {
       if (!volumeSlider || volumeSlider.disabled) return;
-      
+
       // 他のスクロールを阻害しないよう、ボリュームコントロールが表示されている場合のみ奪う
       if (el.classList.contains('show-volume')) {
         e.preventDefault();
         e.stopPropagation();
-        
+
         const step = 5;
         let newValue = parseInt(volumeSlider.value) + (e.deltaY < 0 ? step : -step);
         newValue = Math.max(0, Math.min(100, newValue));
-        
+
         volumeSlider.value = newValue;
         volumeSlider.dispatchEvent(new Event('input'));
       }
@@ -688,7 +688,7 @@ async function closeTab(tabId) {
 async function setTabVolume(tabId, volume) {
   try {
     state.tabVolumes[tabId] = volume;
-    
+
     // スクリプトを実行して音量を変更
     await chrome.scripting.executeScript({
       target: { tabId: tabId },
@@ -697,7 +697,7 @@ async function setTabVolume(tabId, volume) {
         mediaElements.forEach(media => {
           media.volume = v / 100;
         });
-        
+
         // 新しく追加されるビデオ・オーディオ要素も監視（オブザーバー）
         if (!window._volumeObserver) {
           window._volumeObserver = new MutationObserver((mutations) => {
@@ -1477,9 +1477,9 @@ function setupVoiceTool() {
           sum += dataArray[i];
         }
         const average = sum / bufferLength;
-        
+
         // スケールに変換（感度調整：128で最大。声の大きさで調整）
-        const scale = Math.min(average / 100, 1.2); 
+        const scale = Math.min(average / 100, 1.2);
         gaugeBar.style.transform = `scaleX(${scale})`;
 
         animationId = requestAnimationFrame(updateGauge);
@@ -1838,7 +1838,10 @@ function setupSummaryTool() {
     copyMdBtn.addEventListener('click', async () => {
       // システムページ制限の事前チェック
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tab && (tab.url.startsWith('chrome:') || tab.url.startsWith('edge:') || tab.url.startsWith('about:') || tab.url.startsWith('chrome-extension:'))) {
+      if (!tab || !tab.url) return;
+
+      const url = tab.url.toLowerCase();
+      if (url.startsWith('chrome:') || url.startsWith('edge:') || url.startsWith('about:') || url.startsWith('chrome-extension:')) {
         const friendlyMsg = '【制限】セキュリティ制限により取得できません。通常のウェブサイトで実行してください。';
         resultArea.value = friendlyMsg;
         showToast('内容を取得できませんでした');
@@ -1848,12 +1851,26 @@ function setupSummaryTool() {
         return;
       }
 
-      const confirmMsg = "ページの一部が読み込まれていない場合、全文がコピーされないことがあります。\n\n" +
-                         "無限スクロールを採用しているSNS（X、Facebook）や、表示に合わせてコンテンツを読み込むニュースサイト、" +
-                         "やり取りの長くなったAIチャット（ChatGPT、Claude等）などでは、一番下までスクロールして全てのコンテンツを表示させてから実行することを推奨します。\n\n" +
-                         "コピーを続行しますか？";
-      
-      if (!window.confirm(confirmMsg)) return;
+      // サイト別メッセージ表示判定
+      let confirmMsg = null;
+      const isYouTube = url.includes('youtube.com');
+      const isSNS = ['x.com', 'twitter.com'].some(d => url.includes(d));
+      const isAI = [
+        'chatgpt.com', 'claude.ai', 'gemini.google.com', 'copilot.microsoft.com',
+        'cloud.microsoft', 'deepseek.com', 'grok.com', 'perplexity.ai',
+        'mistral.ai', 'notebooklm.google.com', 'github.com', 'poe.com',
+        'v0.app', 'cursor.com'
+      ].some(d => url.includes(d));
+
+      if (isYouTube) {
+        confirmMsg = "YouTubeなどの動画サイトでは、動画そのものの内容（映像・音声）ではなく、現在画面上に表示されているテキスト情報（タイトル、説明、表示済みのコメント等）を取得します。\n\n続行しますか？";
+      } else if (isSNS || isAI) {
+        confirmMsg = "このページ（SNS、AIチャット、GitHubなど）は、表示に合わせてコンテンツが読み込まれます。\n\nやり取りが長い場合や無限スクロールのページでは、一番下までスクロールして全てのコンテンツを表示させてから実行することを推奨します。\n\nコピーを続行しますか？";
+      }
+
+      if (confirmMsg && !window.confirm(confirmMsg)) {
+        return;
+      }
 
       statusDisplay.textContent = 'ページ内容を取得中...';
       statusDisplay.style.display = 'block';
@@ -1971,9 +1988,9 @@ async function sendTextToGemini(text, apiKey, resultArea, statusDisplay, mode) {
 function updateMarkdownPreview(group) {
   const resultArea = document.getElementById(group === 'voice' ? 'voiceResultArea' : 'summaryResultArea');
   const previewArea = document.getElementById(group === 'voice' ? 'voicePreviewArea' : 'summaryPreviewArea');
-  
+
   if (!resultArea || !previewArea) return;
-  
+
   const markdown = resultArea.value;
   // marked が読み込まれているか確認
   if (typeof marked !== 'undefined') {
@@ -1994,16 +2011,16 @@ function setupOutputTabs() {
       const mode = tab.dataset.mode;
       const group = tab.dataset.group;
       const targetId = tab.dataset.target;
-      
+
       // 同じグループのタブのアクティブ状態を更新
       document.querySelectorAll(`.output-tab[data-group="${group}"]`).forEach(t => {
         t.classList.toggle('active', t === tab);
       });
-      
+
       // テキストエリアとプレビューの表示切替
       const resultArea = document.getElementById(group === 'voice' ? 'voiceResultArea' : 'summaryResultArea');
       const previewArea = document.getElementById(group === 'voice' ? 'voicePreviewArea' : 'summaryPreviewArea');
-      
+
       if (mode === 'edit') {
         resultArea.classList.remove('hidden');
         previewArea.classList.add('hidden');
@@ -2031,7 +2048,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   setupOutputTabs();
-  
+
   // 要約や音声入力のテキストエリアが変更されたらプレビューも更新するようにイベントバインド
   ['voiceResultArea', 'summaryResultArea'].forEach(id => {
     const el = document.getElementById(id);
