@@ -196,70 +196,7 @@ body {
   height: 16px;
 }
 
-.tab-nav {
-  display: flex;
-  position: relative;
-  background: var(--bg-secondary);
-  border-radius: var(--radius-md);
-  padding: 3px;
-  gap: 2px;
-}
 
-.tab-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-sm) var(--spacing-xs);
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-family: var(--font-family);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  white-space: nowrap;
-  transition: all var(--transition-base);
-  position: relative;
-  z-index: 1;
-}
-
-.tab-btn:hover {
-  color: var(--text-primary);
-}
-
-.tab-btn.active {
-  color: var(--text-primary);
-}
-
-.tab-icon {
-  width: 15px;
-  height: 15px;
-  flex-shrink: 0;
-}
-
-/* タブインジケーター（スライドアニメーション） */
-.tab-indicator {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: calc(33.333% - 1.33px);
-  height: calc(100% - 6px);
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-sm);
-  transition: transform var(--transition-slow) cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: var(--shadow-sm);
-}
-
-.tab-indicator.pos-1 {
-  transform: translateX(calc(100% + 2px));
-}
-
-.tab-indicator.pos-2 {
-  transform: translateX(calc(200% + 4px));
-}
 
 /* ===========================
    アドレスバー
@@ -386,6 +323,162 @@ body {
 .panel.active {
   display: block;
 }
+
+/* ===========================
+   分割表示モード
+   =========================== */
+.content.split-mode {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  padding: 0 4px;
+  align-items: flex-start;
+}
+
+.split-resizer {
+  display: none;
+  width: 6px;
+  background: transparent;
+  cursor: col-resize;
+  position: relative;
+  z-index: 10;
+  height: calc(100vh - 130px);
+  flex-shrink: 0;
+  transition: background var(--transition-fast);
+}
+
+.split-resizer::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-50%);
+  background: var(--border);
+  border-radius: 1px;
+}
+
+.content.split-mode .split-resizer {
+  display: block;
+}
+
+.split-resizer:hover::after,
+.split-resizer.dragging::after {
+  background: var(--accent);
+  width: 3px;
+}
+
+.content.split-mode .panel {
+  display: none !important;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  overflow: hidden;
+  max-height: calc(100vh - 130px);
+  display: flex !important;
+  flex-direction: column;
+}
+
+/* 幅をJS変数で制御 */
+.content.split-mode #tabsPanel {
+  width: var(--tabs-width, 50%) !important;
+  flex: none !important;
+}
+
+.content.split-mode #bookmarksPanel {
+  width: var(--bookmarks-width, 50%) !important;
+  flex: none !important;
+}
+
+/* 分割モード時はタブとブックマークのみ表示対象 */
+.content.split-mode #tabsPanel,
+.content.split-mode #bookmarksPanel {
+  display: flex !important;
+}
+
+.content.split-mode #toolsPanel {
+  display: none !important;
+}
+
+/* ブックマークのファビコンのみ表示モード */
+.content.split-mode #bookmarksPanel.favicon-only .bookmark-item-title,
+.content.split-mode #bookmarksPanel.favicon-only .bookmark-folder-name,
+.content.split-mode #bookmarksPanel.favicon-only .bookmark-folder-count,
+.content.split-mode #bookmarksPanel.favicon-only .folder-chevron {
+  display: none !important;
+}
+
+.content.split-mode #bookmarksPanel.favicon-only .bookmark-folder-children {
+  padding-left: 0;
+}
+
+.content.split-mode #bookmarksPanel.favicon-only .bookmark-item,
+.content.split-mode #bookmarksPanel.favicon-only .bookmark-folder-header {
+  justify-content: center;
+  padding: 8px 0;
+}
+
+/* タブのファビコンのみ表示モード */
+.content.split-mode #tabsPanel.favicon-only .tab-item-info,
+.content.split-mode #tabsPanel.favicon-only .tab-item-url,
+.content.split-mode #tabsPanel.favicon-only .close-btn,
+.content.split-mode #tabsPanel.favicon-only .volume-control,
+.content.split-mode #tabsPanel.favicon-only .pin-badge {
+  display: none !important;
+}
+
+.content.split-mode #tabsPanel.favicon-only .tab-item {
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.content.split-mode #tabsPanel.favicon-only .panel-actions {
+  justify-content: center;
+  padding: 8px 4px;
+}
+
+.content.split-mode #tabsPanel.favicon-only .action-btn {
+  padding: 8px 0;
+  min-height: auto;
+}
+
+.content.split-mode #tabsPanel.favicon-only .action-btn span {
+  display: none;
+}
+
+
+
+
+.content.split-mode .list {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.content.split-mode .panel-actions {
+  padding: var(--spacing-sm);
+}
+
+.content.split-mode .tab-item {
+  padding: 6px var(--spacing-sm);
+}
+
+.content.split-mode .tab-item-url {
+  display: none; /* 幅が狭いためURLは隠す */
+}
+
+.content.split-mode .bookmark-folder-header,
+.content.split-mode .bookmark-item {
+  padding: 4px var(--spacing-sm);
+}
+
+#navSplitView.active,
+#navTools.active {
+  background: var(--accent-subtle);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent-glow);
+}
+
 
 #toolsPanel.active {
   display: flex;

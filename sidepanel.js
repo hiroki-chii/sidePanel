@@ -14,14 +14,14 @@ const state = {
   bookmarks: [],
   openFolderIds: new Set(), // 開いているフォルダのIDを保持
   tabVolumes: {}, // tabId -> volume (0-100)
+  isSplitView: true, // 分割表示モード (固定)
+  splitRatio: 50, // 分割比率 (0-100)
 };
 
 // ===========================
 // DOM参照
 // ===========================
 const dom = {
-  tabBtns: document.querySelectorAll('.tab-btn'),
-  tabIndicator: document.querySelector('.tab-indicator'),
   navBack: document.getElementById('navBack'),
   navForward: document.getElementById('navForward'),
   addressInput: document.getElementById('addressInput'),
@@ -33,6 +33,8 @@ const dom = {
   tabsEmpty: document.getElementById('tabsEmpty'),
   bookmarksEmpty: document.getElementById('bookmarksEmpty'),
   bookmarkPageBtn: document.getElementById('bookmarkPageBtn'),
+  navTools: document.getElementById('navTools'),
+  splitResizer: document.getElementById('splitResizer'),
 };
 
 // ===========================
@@ -40,13 +42,13 @@ const dom = {
 // ===========================
 document.addEventListener('DOMContentLoaded', async () => {
   setupNavigation();
-  setupTabNavigation();
   setupAddressBar();
   setupBookmarkAction();
   setupContextMenu();
   setupNewTabAction();
   setupTabListeners(); // タブのイベントリスナーを設定
   updateNavButtonsStatus(); // ナビゲーションボタンの状態を初期更新
+  setupResizer(); // リサイザーの初期化
   loadTabs();
   await loadAppState(); // 保存された状態を読み込む
   switchTab(state.activeTab); // 保存されたタブに切り替え
@@ -67,6 +69,131 @@ function setupNewTabAction() {
     newTabBtn.addEventListener('click', () => {
       chrome.tabs.create({});
     });
+  }
+}
+
+/**
+ * 分割表示のセットアップ
+ */
+
+/**
+ * 分割表示の適用
+ */
+function applySplitView() {
+  const content = document.querySelector('.content');
+  if (!content) return;
+
+  content.classList.toggle('split-mode', state.isSplitView);
+
+  if (state.isSplitView) {
+    const addressBar = document.getElementById('addressBarContainer');
+    if (addressBar) addressBar.style.display = 'flex';
+
+    renderTabs();
+    renderBookmarks();
+    applySplitRatio(); // 比率を適用
+  } else {
+    switchTab(state.activeTab);
+  }
+}
+
+/**
+ * リサイザーのセットアップ
+ */
+function setupResizer() {
+  if (!dom.splitResizer) return;
+
+  let isDragging = false;
+
+  dom.splitResizer.addEventListener('mousedown', (e) => {
+    if (!state.isSplitView) return;
+    isDragging = true;
+    dom.splitResizer.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging || !state.isSplitView) return;
+
+    const content = document.querySelector('.content');
+    const rect = content.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const totalWidth = rect.width;
+
+    if (totalWidth <= 0) return;
+
+    // 比率を計算 (0-100)
+    let ratio = (offsetX / totalWidth) * 100;
+
+    // 制約の適用
+    const minTabWidth = 36; // 「新規タブを追加」が改行されない最小
+    const minBookmarkWidth = 36; // ファビコンが見える最小
+
+    const minTabRatio = (minTabWidth / totalWidth) * 100;
+    const minBookmarkRatio = (minBookmarkWidth / totalWidth) * 100;
+
+    ratio = Math.max(minTabRatio, Math.min(100 - minBookmarkRatio, ratio));
+
+    state.splitRatio = ratio;
+    applySplitRatio();
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      dom.splitResizer.classList.remove('dragging');
+      document.body.style.cursor = '';
+      saveAppState();
+    }
+  });
+
+  // ウィンドウサイズ変更時にも比率を再計算
+  window.addEventListener('resize', () => {
+    if (state.isSplitView) applySplitRatio();
+  });
+}
+
+/**
+ * 分割比率の適用
+ */
+function applySplitRatio() {
+  const content = document.querySelector('.content');
+  if (!content || !state.isSplitView) return;
+
+  const ratio = state.splitRatio || 50;
+  content.style.setProperty('--tabs-width', `${ratio}%`);
+  content.style.setProperty('--bookmarks-width', `${100 - ratio}%`);
+
+  // 各パネルの表示モード切り替え（ファビコンのみにするか）
+  const contentWidth = content.getBoundingClientRect().width;
+  if (contentWidth > 0) {
+    const tabWidth = contentWidth * (ratio / 100);
+    const bookmarkWidth = contentWidth * ((100 - ratio) / 100);
+
+    // 新規タブボタンのテキスト制御
+    const newTabBtn = document.getElementById('newTabBtn');
+    if (newTabBtn) {
+      const btnText = newTabBtn.querySelector('.btn-text');
+      if (btnText) {
+        if (tabWidth > 180) {
+          btnText.textContent = '新規タブを追加';
+          btnText.style.display = 'inline';
+        } else if (tabWidth > 120) {
+          btnText.textContent = 'タブを追加';
+          btnText.style.display = 'inline';
+        } else if (tabWidth > 80) {
+          btnText.textContent = '追加';
+          btnText.style.display = 'inline';
+        } else {
+          btnText.style.display = 'none'; // ＋アイコンのみ
+        }
+      }
+    }
+
+    // 80px以下ならファビコンのみ
+    if (dom.tabsPanel) dom.tabsPanel.classList.toggle('favicon-only', tabWidth < 80);
+    if (dom.bookmarksPanel) dom.bookmarksPanel.classList.toggle('favicon-only', bookmarkWidth < 80);
   }
 }
 
@@ -114,6 +241,13 @@ function setupNavigation() {
       chrome.windows.update(win.id, { state: 'fullscreen' });
     }
   });
+
+  if (dom.navTools) {
+    dom.navTools.addEventListener('click', () => {
+      const nextTab = state.activeTab === 'tools' ? 'tabs' : 'tools';
+      switchTab(nextTab);
+    });
+  }
 }
 
 /**
@@ -170,30 +304,19 @@ async function updateNavButtonsStatus() {
 // ===========================
 // タブナビゲーション
 // ===========================
-function setupTabNavigation() {
-  dom.tabBtns.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const tab = btn.dataset.tab;
-      switchTab(tab);
-    });
-  });
-}
 
 function switchTab(tab) {
+  // ツール選択時は分割表示を無効化、それ以外は有効化
+  state.isSplitView = (tab !== 'tools');
+  applySplitView();
+
   state.activeTab = tab;
 
-  // ボタンのアクティブ状態を更新
-  dom.tabBtns.forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.tab === tab);
-  });
-
-  // インジケーターの位置を更新
-  dom.tabIndicator.classList.remove('pos-1', 'pos-2');
-  if (tab === 'bookmarks') {
-    dom.tabIndicator.classList.add('pos-1');
-  } else if (tab === 'tools') {
-    dom.tabIndicator.classList.add('pos-2');
+  // ツールボタンのアクティブ状態を更新
+  if (dom.navTools) {
+    dom.navTools.classList.toggle('active', tab === 'tools');
   }
+
 
   // パネルの表示切替
   dom.tabsPanel.classList.toggle('active', tab === 'tabs');
@@ -624,7 +747,7 @@ function createTabItemHTML(tab) {
     : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>`;
 
   return `
-    <div class="tab-item${currentClass}${showVolumeClass}${mutedPlayingClass}" data-tab-id="${tab.id}" data-window-id="${tab.windowId}" data-index="${tab.index}" draggable="true">
+    <div class="tab-item${currentClass}${showVolumeClass}${mutedPlayingClass}" data-tab-id="${tab.id}" data-window-id="${tab.windowId}" data-index="${tab.index}" draggable="true" title="${escapeHTML(tab.title || '新しいタブ')}">
       ${faviconHTML}
       <div class="tab-item-info">
         <div class="tab-item-title">${escapeHTML(tab.title || '新しいタブ')}</div>
@@ -782,7 +905,7 @@ function renderBookmarkNode(node) {
     const openClass = isOpen ? ' open' : '';
 
     return `
-      <div class="bookmark-folder${openClass}" data-bookmark-id="${node.id}" draggable="true">
+      <div class="bookmark-folder${openClass}" data-bookmark-id="${node.id}" draggable="true" title="${escapeHTML(node.title || 'フォルダ')}">
         <div class="bookmark-folder-header">
           <svg class="folder-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 18l6-6-6-6"/>
@@ -812,7 +935,7 @@ function createBookmarkItemHTML(node) {
     : getFaviconPlaceholderHTML();
 
   return `
-    <div class="bookmark-item" data-bookmark-id="${node.id}" data-url="${escapeHTML(node.url)}" draggable="true">
+    <div class="bookmark-item" data-bookmark-id="${node.id}" data-url="${escapeHTML(node.url)}" draggable="true" title="${escapeHTML(node.title || node.url)}">
       ${faviconHTML}
       <span class="bookmark-item-title">${escapeHTML(node.title || node.url)}</span>
     </div>
@@ -973,7 +1096,9 @@ async function saveAppState() {
   try {
     await chrome.storage.local.set({
       openFolderIds: Array.from(state.openFolderIds),
-      activeTab: state.activeTab
+      activeTab: state.activeTab,
+      isSplitView: state.isSplitView,
+      splitRatio: state.splitRatio
     });
   } catch (error) {
     console.error('状態の保存に失敗:', error);
@@ -982,12 +1107,23 @@ async function saveAppState() {
 
 async function loadAppState() {
   try {
-    const result = await chrome.storage.local.get(['openFolderIds', 'activeTab']);
+    const result = await chrome.storage.local.get(['openFolderIds', 'activeTab', 'isSplitView']);
     if (result.openFolderIds) {
       state.openFolderIds = new Set(result.openFolderIds);
     }
     if (result.activeTab) {
       state.activeTab = result.activeTab;
+    }
+    if (result.isSplitView !== undefined) {
+      state.isSplitView = result.isSplitView;
+    }
+    if (result.splitRatio !== undefined) {
+      state.splitRatio = result.splitRatio;
+    }
+
+    // 初期ロード時の状態適用
+    if (state.isSplitView) {
+      applySplitView();
     }
   } catch (error) {
     console.error('状態の読み込みに失敗:', error);
