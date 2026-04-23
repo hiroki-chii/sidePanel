@@ -333,4 +333,146 @@
     }
   });
 
+  // --- Gemini Canvas Fullscreen ---
+  function setupGeminiCanvasFullscreen() {
+    if (window.location.hostname !== "gemini.google.com") return;
+    
+    // 読み込み確認ログ（早期に出力）
+    console.log("[GeminiCanvasFullscreen] スクリプトが開始されました。URL:", window.location.href);
+
+    // スタイルを注入
+    const CSS_ID = "gemini-canvas-fullscreen-styles";
+    const injectStyles = () => {
+      if (document.getElementById(CSS_ID)) return;
+      const style = document.createElement("style");
+      style.id = CSS_ID;
+      style.textContent = `
+        body.g-canvas-full .g-canvas-hidden { display: none !important; }
+        body.g-canvas-full .g-canvas-expanded { 
+          width: 100vw !important; 
+          max-width: 100vw !important; 
+          flex: 1 1 100% !important; 
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          height: 100vh !important;
+          z-index: 999999 !important;
+          background: #fff !important;
+        }
+        @media (prefers-color-scheme: dark) {
+          body.g-canvas-full .g-canvas-expanded { background: #1e1e1e !important; }
+        }
+        .g-full-btn {
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          padding: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          color: currentColor;
+          opacity: 0.7;
+          transition: all 0.2s;
+          margin: 0 4px;
+        }
+        .g-full-btn:hover {
+          opacity: 1;
+          background-color: rgba(128, 128, 128, 0.15);
+        }
+        .g-full-btn svg { width: 20px; height: 20px; }
+        body.g-canvas-full .g-full-btn { color: #1a73e8; opacity: 1; background: rgba(26, 115, 232, 0.1); }
+      `;
+      (document.head || document.documentElement).appendChild(style);
+    };
+
+    function findAnchor() {
+      // プレビュー、コード、共有、または X ボタンを探す
+      const targets = ["プレビュー", "Preview", "コード", "Code", "共有", "Share"];
+      const elements = document.querySelectorAll("button, [role='button'], [role='tab'], span, div");
+      for (const el of elements) {
+        const text = (el.innerText || el.textContent || "").trim();
+        if (targets.includes(text)) {
+          console.log("[GeminiCanvasFullscreen] アンカー要素を発見:", text);
+          return el;
+        }
+      }
+      return null;
+    }
+
+    function injectButton() {
+      injectStyles();
+      const anchor = findAnchor();
+      if (!anchor) return;
+
+      const header = anchor.closest('[role="toolbar"]') || 
+                     anchor.closest('div[class*="toolbar"]') || 
+                     anchor.closest('div[class*="header"]') ||
+                     anchor.parentElement;
+      
+      if (!header || header.querySelector(".g-full-btn")) return;
+
+      console.log("[GeminiCanvasFullscreen] ボタンを注入します。");
+
+      const btn = document.createElement("button");
+      btn.className = "g-full-btn";
+      btn.title = "全画面表示切り替え (Tab & Bookmark Panel)";
+      btn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+        </svg>
+      `;
+
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const isFull = document.body.classList.toggle("g-canvas-full");
+        
+        // コンテナの特定
+        const currentAnchor = findAnchor();
+        if (!currentAnchor) return;
+        
+        const header = currentAnchor.closest('[role="toolbar"]') || 
+                       currentAnchor.closest('div[class*="toolbar"]') || 
+                       currentAnchor.closest('div[class*="header"]') ||
+                       currentAnchor.parentElement;
+
+        // ヘッダーから上に辿り、Canvas全体を包むコンテナ（高さがある要素）を探す
+        let container = header;
+        while (container && container.parentElement && container.tagName !== "BODY") {
+          // ヘッダーより明らかに高く、画面の半分以上の高さがあるものをコンテナとみなす
+          if (container.offsetHeight > window.innerHeight * 0.5) {
+            break;
+          }
+          container = container.parentElement;
+        }
+        
+        if (container) {
+          console.log("[GeminiCanvasFullscreen] コンテナを全画面化:", container);
+          container.classList.toggle("g-canvas-expanded", isFull);
+          // 兄弟要素（チャット等）を隠す
+          let parent = container.parentElement;
+          if (parent) {
+            Array.from(parent.children).forEach(child => {
+              if (child !== container) {
+                child.classList.toggle("g-canvas-hidden", isFull);
+              }
+            });
+          }
+        }
+      };
+
+      header.insertBefore(btn, header.firstChild);
+    }
+
+    // 監視設定 (document_start に対応するため documentElement から開始)
+    const observer = new MutationObserver(injectButton);
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+    
+    // 定期的なフォールバック
+    setInterval(injectButton, 3000);
+  }
+
+  setupGeminiCanvasFullscreen();
+
 })();
