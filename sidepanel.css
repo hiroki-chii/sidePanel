@@ -1,9 +1,9 @@
 /* ===========================
-   デザイントークン
+   繝�じ繧､繝ｳ繝医�繧ｯ繝ｳ
    =========================== */
 :root {
   /* ===========================
-     ライトモード (Default)
+     繝ｩ繧､繝医Δ繝ｼ繝� (Default)
      =========================== */
   --bg-primary: #ffffff;
   --bg-secondary: #f8f9fa;
@@ -29,31 +29,31 @@
   --success: #2ab57d;
   --warning: #f1b44c;
 
-  /* タイポグラフィ */
+  /* 繧ｿ繧､繝昴げ繝ｩ繝輔ぅ */
   --font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-size-xs: 11px;
   --font-size-sm: 12px;
   --font-size-base: 13px;
   --font-size-md: 14px;
 
-  /* スペーシング */
+  /* 繧ｹ繝壹�繧ｷ繝ｳ繧ｰ */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 12px;
   --spacing-lg: 16px;
   --spacing-xl: 20px;
 
-  /* ボーダー半径 */
+  /* 繝懊�繝繝ｼ蜊雁ｾ� */
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
 
-  /* トランジション */
+  /* 繝医Λ繝ｳ繧ｸ繧ｷ繝ｧ繝ｳ */
   --transition-fast: 150ms ease;
   --transition-base: 200ms ease;
   --transition-slow: 300ms ease;
 
-  /* シャドウ */
+  /* 繧ｷ繝｣繝峨え */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
@@ -61,7 +61,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     /* ===========================
-       ダークモード (Override)
+       繝繝ｼ繧ｯ繝｢繝ｼ繝� (Override)
        =========================== */
     --bg-primary: #0f0f14;
     --bg-secondary: #16161e;
@@ -93,7 +93,7 @@
 }
 
 /* ===========================
-   リセット・ベース
+   繝ｪ繧ｻ繝�ヨ繝ｻ繝吶�繧ｹ
    =========================== */
 *,
 *::before,
@@ -117,7 +117,7 @@ body {
   min-height: 100vh;
 }
 
-/* スクロールバー */
+/* 繧ｹ繧ｯ繝ｭ繝ｼ繝ｫ繝舌� */
 ::-webkit-scrollbar {
   width: 5px;
 }
@@ -136,7 +136,7 @@ body {
 }
 
 /* ===========================
-   ヘッダー・タブナビゲーション
+   繝倥ャ繝繝ｼ繝ｻ繧ｿ繝悶リ繝薙ご繝ｼ繧ｷ繝ｧ繝ｳ
    =========================== */
 .header {
   position: sticky;
@@ -150,7 +150,7 @@ body {
   gap: var(--spacing-sm);
 }
 
-/* ページナビゲーション */
+/* 繝壹�繧ｸ繝翫ン繧ｲ繝ｼ繧ｷ繝ｧ繝ｳ */
 .nav-bar {
   display: flex;
   align-items: center;
@@ -199,7 +199,7 @@ body {
 
 
 /* ===========================
-   アドレスバー
+   繧｢繝峨Ξ繧ｹ繝舌�
    =========================== */
 .address-bar {
   display: flex;
@@ -308,7 +308,7 @@ body {
 }
 
 /* ===========================
-   コンテンツエリア
+   繧ｳ繝ｳ繝�Φ繝�お繝ｪ繧｢
    =========================== */
 .content {
   padding: 0 var(--spacing-sm);
@@ -325,7 +325,7 @@ body {
 }
 
 /* ===========================
-   分割表示モード
+   蛻�牡陦ｨ遉ｺ繝｢繝ｼ繝�
    =========================== */
 .content.split-mode {
   display: flex;
@@ -380,7 +380,7 @@ body {
   flex-direction: column;
 }
 
-/* 幅をJS変数で制御 */
+/* 蟷�ｒJS螟画焚縺ｧ蛻ｶ蠕｡ */
 .content.split-mode #tabsPanel {
   width: var(--tabs-width, 50%) !important;
   flex: none !important;
@@ -391,7 +391,7 @@ body {
   flex: none !important;
 }
 
-/* 分割モード時はタブとブックマークのみ表示対象 */
+/* 蛻�牡繝｢繝ｼ繝画凾縺ｯ繧ｿ繝悶→繝悶ャ繧ｯ繝槭�繧ｯ縺ｮ縺ｿ陦ｨ遉ｺ蟇ｾ雎｡ */
 .content.split-mode #tabsPanel,
 .content.split-mode #bookmarksPanel {
   display: flex !important;
@@ -401,7 +401,7 @@ body {
   display: none !important;
 }
 
-/* ブックマークのファビコンのみ表示モード */
+/* 繝悶ャ繧ｯ繝槭�繧ｯ縺ｮ繝輔ぃ繝薙さ繝ｳ縺ｮ縺ｿ陦ｨ遉ｺ繝｢繝ｼ繝� */
 .content.split-mode #bookmarksPanel.favicon-only .bookmark-item-title,
 .content.split-mode #bookmarksPanel.favicon-only .bookmark-folder-name,
 .content.split-mode #bookmarksPanel.favicon-only .bookmark-folder-count,
@@ -419,7 +419,7 @@ body {
   padding: 8px 0;
 }
 
-/* タブのファビコンのみ表示モード */
+/* 繧ｿ繝悶�繝輔ぃ繝薙さ繝ｳ縺ｮ縺ｿ陦ｨ遉ｺ繝｢繝ｼ繝� */
 .content.split-mode #tabsPanel.favicon-only .tab-item-info,
 .content.split-mode #tabsPanel.favicon-only .tab-item-url,
 .content.split-mode #tabsPanel.favicon-only .close-btn,
@@ -464,7 +464,7 @@ body {
 }
 
 .content.split-mode .tab-item-url {
-  display: none; /* 幅が狭いためURLは隠す */
+  display: none; /* 蟷�′迢ｭ縺�◆繧ゞRL縺ｯ髫�縺� */
 }
 
 .content.split-mode .bookmark-folder-header,
@@ -472,8 +472,9 @@ body {
   padding: 4px var(--spacing-sm);
 }
 
-#navSplitView.active,
-#navTools.active {
+#navMain.active,
+#navTools.active,
+#navFullscreen.active {
   background: var(--accent-subtle);
   color: var(--accent);
   box-shadow: inset 0 0 0 1px var(--accent-glow);
@@ -500,7 +501,7 @@ body {
 }
 
 /* ===========================
-   アクション関連
+   繧｢繧ｯ繧ｷ繝ｧ繝ｳ髢｢騾｣
    =========================== */
 .panel-actions {
   padding: var(--spacing-sm) var(--spacing-md);
@@ -540,7 +541,7 @@ body {
 }
 
 /* ===========================
-   タブアイテム
+   繧ｿ繝悶い繧､繝�Β
    =========================== */
 .tab-item {
   display: flex;
@@ -655,7 +656,7 @@ body {
   height: 14px;
 }
 
-/* ピン留めバッジ */
+/* 繝斐Φ逡吶ａ繝舌ャ繧ｸ */
 .tab-item .pin-badge {
   width: 12px;
   height: 12px;
@@ -663,7 +664,7 @@ body {
   color: var(--warning);
 }
 
-/* ミュートコントロール */
+/* 繝溘Η繝ｼ繝医さ繝ｳ繝医Ο繝ｼ繝ｫ */
 .tab-item .mute-control {
   display: flex;
   align-items: center;
@@ -676,14 +677,14 @@ body {
   padding-right: 4px;
 }
 
-/* 再生中またはミュート中のタブに表示 */
+/* 蜀咲函荳ｭ縺ｾ縺溘�繝溘Η繝ｼ繝井ｸｭ縺ｮ繧ｿ繝悶↓陦ｨ遉ｺ */
 .tab-item.show-mute .mute-control {
   opacity: 1;
   pointer-events: auto;
   visibility: visible;
 }
 
-/* ミュートボタン */
+/* 繝溘Η繝ｼ繝医�繧ｿ繝ｳ */
 .tab-item .mute-btn {
   display: flex;
   align-items: center;
@@ -707,7 +708,7 @@ body {
   color: var(--text-muted);
 }
 
-/* ミュート中だが再生中の場合のアニメーション */
+/* 繝溘Η繝ｼ繝井ｸｭ縺�縺悟�逕滉ｸｭ縺ｮ蝣ｴ蜷医�繧｢繝九Γ繝ｼ繧ｷ繝ｧ繝ｳ */
 .tab-item.muted-playing .mute-btn {
   color: var(--accent);
   animation: pulse-mute 1.5s infinite;
@@ -735,7 +736,7 @@ body {
 
 
 /* ===========================
-   ウィンドウセパレーター
+   繧ｦ繧｣繝ｳ繝峨え繧ｻ繝代Ξ繝ｼ繧ｿ繝ｼ
    =========================== */
 .window-separator {
   display: flex;
@@ -773,7 +774,7 @@ body {
 }
 
 /* ===========================
-   ブックマークアイテム
+   繝悶ャ繧ｯ繝槭�繧ｯ繧｢繧､繝�Β
    =========================== */
 .bookmark-folder {
   margin-bottom: 2px;
@@ -908,7 +909,7 @@ body {
 }
 
 /* ===========================
-   空状態
+   遨ｺ迥ｶ諷�
    =========================== */
 .empty-state {
   display: flex;
@@ -932,7 +933,7 @@ body {
 }
 
 /* ===========================
-   ローディング
+   繝ｭ繝ｼ繝�ぅ繝ｳ繧ｰ
    =========================== */
 .loading-skeleton {
   display: flex;
@@ -979,7 +980,7 @@ body {
 }
 
 /* ===========================
-   コンテキストメニュー
+   繧ｳ繝ｳ繝�く繧ｹ繝医Γ繝九Η繝ｼ
    =========================== */
 .context-menu {
   position: fixed;
@@ -1047,7 +1048,7 @@ body {
 }
 
 /* ===========================
-   トースト通知
+   繝医�繧ｹ繝磯夂衍
    =========================== */
 .toast {
   position: fixed;
@@ -1071,7 +1072,7 @@ body {
 }
 
 /* ===========================
-   設定グループ・トグルスイッチ
+   險ｭ螳壹げ繝ｫ繝ｼ繝励�繝医げ繝ｫ繧ｹ繧､繝�メ
    =========================== */
 .settings-group {
   display: flex;
@@ -1155,7 +1156,7 @@ input:checked+.toggle-slider:before {
 }
 
 /* ===========================
-   ブックマーク ドラッグ&ドロップ
+   繝悶ャ繧ｯ繝槭�繧ｯ 繝峨Λ繝�げ&繝峨Ο繝��
    =========================== */
 .bookmark-item.dragging,
 .bookmark-folder.dragging {
@@ -1188,7 +1189,7 @@ input:checked+.toggle-slider:before {
 }
 
 /* ===========================
-   折りたたみ可能なセクション
+   謚倥ｊ縺溘◆縺ｿ蜿ｯ閭ｽ縺ｪ繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ
    =========================== */
 .collapsible-header {
   cursor: pointer;
@@ -1241,7 +1242,7 @@ input:checked+.toggle-slider:before {
 }
 
 /* ===========================
-   設定パネル (Gemini API)
+   險ｭ螳壹ヱ繝阪Ν (Gemini API)
    =========================== */
 .settings-panel {
   margin: 0 var(--spacing-md) var(--spacing-sm);
@@ -1302,7 +1303,7 @@ input:checked+.toggle-slider:before {
 }
 
 /* ===========================
-   要約ツール・音声ツール共通
+   隕∫ｴ�ヤ繝ｼ繝ｫ繝ｻ髻ｳ螢ｰ繝��繝ｫ蜈ｱ騾�
    =========================== */
 #voiceMode:hover,
 #summaryMode:hover {
@@ -1324,7 +1325,7 @@ input:checked+.toggle-slider:before {
 }
 
 /* ===========================
-   マークダウンプレビュー・切替タブ
+   繝槭�繧ｯ繝繧ｦ繝ｳ繝励Ξ繝薙Η繝ｼ繝ｻ蛻�崛繧ｿ繝�
    =========================== */
 .output-container {
   display: flex;
@@ -1407,7 +1408,7 @@ input:checked+.toggle-slider:before {
   margin-bottom: 12px;
 }
 
-/* リストスタイルの明示的な定義 */
+/* 繝ｪ繧ｹ繝医せ繧ｿ繧､繝ｫ縺ｮ譏守､ｺ逧�↑螳夂ｾｩ */
 .markdown-body ul,
 .markdown-body ol {
   padding-left: 24px !important;
@@ -1442,7 +1443,7 @@ input:checked+.toggle-slider:before {
   margin-top: 8px;
 }
 
-/* コード表現 */
+/* 繧ｳ繝ｼ繝芽｡ｨ迴ｾ */
 .markdown-body code {
   padding: 0.2em 0.4em;
   margin: 0;
@@ -1471,7 +1472,7 @@ input:checked+.toggle-slider:before {
   white-space: pre;
 }
 
-/* 引用 */
+/* 蠑慕畑 */
 .markdown-body blockquote {
   padding: 0 1em;
   color: var(--text-secondary);
@@ -1482,7 +1483,7 @@ input:checked+.toggle-slider:before {
   padding: 8px 16px;
 }
 
-/* テーブル */
+/* 繝��繝悶Ν */
 .markdown-body table {
   display: block;
   width: 100%;
@@ -1511,7 +1512,7 @@ input:checked+.toggle-slider:before {
 }
 
 /* ===========================
-   AI音声入力ボリュームゲージ
+   AI髻ｳ螢ｰ蜈･蜉帙�繝ｪ繝･繝ｼ繝�繧ｲ繝ｼ繧ｸ
    =========================== */
 .voice-volume-gauge-container {
   width: 120px;
@@ -1535,4 +1536,70 @@ input:checked+.toggle-slider:before {
   transform: scaleX(0);
   transform-origin: center;
   transition: transform 0.1s ease-out;
+}
+/* ===========================
+   カスタムモーダル
+   =========================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeInModal var(--transition-base);
+}
+
+.modal-container {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 400px;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  animation: slideUpModal var(--transition-base);
+}
+
+.modal-header {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: var(--spacing-lg);
+  color: var(--text-secondary);
+  font-size: var(--font-size-md);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUpModal {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }

@@ -34,6 +34,7 @@ const dom = {
   bookmarkPageBtn: document.getElementById('bookmarkPageBtn'),
   navTools: document.getElementById('navTools'),
   navFeatures: document.getElementById('navFeatures'),
+  navMain: document.getElementById('navMain'),
   splitResizer: document.getElementById('splitResizer'),
 };
 
@@ -79,6 +80,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupFeatures(); // 機能一覧パネルの初期化
   setupVoiceTool();
   setupSummaryTool(); // ページ要約ツールの初期化
+  setupCustomModal(); // カスタムダイアログの初期化
+  
+  // 初期化時に全画面状態をチェック
+  updateFullscreenHighlight();
 });
 
 // ===========================
@@ -253,18 +258,25 @@ function setupNavigation() {
     const win = await chrome.windows.getCurrent();
     if (win.state === 'fullscreen') {
       // 全画面解除 → 以前の状態に復元
-      chrome.windows.update(win.id, { state: previousWindowState });
+      await chrome.windows.update(win.id, { state: previousWindowState });
     } else {
       // 現在の状態を記憶してから全画面へ
       previousWindowState = win.state;
-      chrome.windows.update(win.id, { state: 'fullscreen' });
+      await chrome.windows.update(win.id, { state: 'fullscreen' });
     }
+    updateFullscreenHighlight();
   });
 
   if (dom.navTools) {
     dom.navTools.addEventListener('click', () => {
       const nextTab = state.activeTab === 'tools' ? 'tabs' : 'tools';
       switchTab(nextTab);
+    });
+  }
+
+  if (dom.navMain) {
+    dom.navMain.addEventListener('click', () => {
+      switchTab('tabs');
     });
   }
 }
@@ -320,9 +332,31 @@ async function updateNavButtonsStatus() {
   }
 }
 
+/**
+ * 全画面状態を監視してハイライトを更新
+ */
+async function updateFullscreenHighlight() {
+  const btn = document.getElementById('navFullscreen');
+  if (!btn) return;
+  const win = await chrome.windows.getCurrent();
+  btn.classList.toggle('active', win.state === 'fullscreen');
+}
+
 // ===========================
 // タブナビゲーション
 // ===========================
+
+/**
+ * ボタンのアクティブ状態を更新（相互排律）
+ */
+function updateActiveButtons(activeId) {
+  if (dom.navMain) {
+    dom.navMain.classList.toggle('active', activeId === 'tabs' || activeId === 'bookmarks');
+  }
+  if (dom.navTools) {
+    dom.navTools.classList.toggle('active', activeId === 'tools');
+  }
+}
 
 function switchTab(tab) {
   state.activeTab = tab;
@@ -331,10 +365,14 @@ function switchTab(tab) {
 
   applySplitView();
 
-  // ツールボタンのアクティブ状態を更新
-  if (dom.navTools) {
-    dom.navTools.classList.toggle('active', tab === 'tools');
+  // 設定パネルが開いている場合は閉じる（相互排律）
+  const settingsContainer = document.getElementById('settingsContainer');
+  const settingsBtn = document.getElementById('navSettings');
+  if (settingsContainer && !settingsContainer.classList.contains('hidden')) {
+    settingsContainer.classList.add('hidden');
   }
+
+  updateActiveButtons(tab);
 
   // 個別パネルの表示切替（分割モード外の場合）
   if (!state.isSplitView) {
@@ -509,6 +547,11 @@ function setupTabListeners() {
     await loadTabs();
     updateAddressBar(); // アドレスバーとブックマークボタンの状態を更新
     updateNavButtonsStatus(); // 戻る・進むボタンの状態も更新
+  });
+
+  // ウィンドウの状態変更を監視（全画面ハイライト用）
+  chrome.windows.onBoundsChanged.addListener(() => {
+    updateFullscreenHighlight();
   });
 }
 
@@ -1255,6 +1298,48 @@ function showToast(message) {
 }
 
 // ===========================
+// カスタムダイアログ (alertの代替)
+// ===========================
+function setupCustomModal() {
+  const modal = document.getElementById('customModal');
+  const closeBtn = document.getElementById('modalCloseBtn');
+  const okBtn = document.getElementById('modalOkBtn');
+
+  if (!modal || !closeBtn || !okBtn) return;
+
+  const closeModal = () => {
+    modal.classList.add('hidden');
+  };
+
+  closeBtn.addEventListener('click', closeModal);
+  okBtn.addEventListener('click', closeModal);
+
+  // 背景クリックで閉じる
+  modal.addEventListener('mousedown', (e) => {
+    if (e.target === modal) closeModal();
+  });
+}
+
+/**
+ * 標準のalertを置き換えるカスタムダイアログを表示
+ */
+function showAlert(message, title = '通知') {
+  const modal = document.getElementById('customModal');
+  const titleEl = document.getElementById('modalTitle');
+  const messageEl = document.getElementById('modalMessage');
+
+  if (!modal || !titleEl || !messageEl) {
+    // 万が一DOMがない場合は標準alertにフォールバック
+    alert(message);
+    return;
+  }
+
+  titleEl.textContent = title;
+  messageEl.textContent = message;
+  modal.classList.remove('hidden');
+}
+
+// ===========================
 // ユーティリティ
 // ===========================
 function escapeHTML(str) {
@@ -1339,8 +1424,15 @@ function setupSettings() {
 
   // 設定ボタンのクリックで表示/非表示を切り替え
   settingsBtn.addEventListener('click', () => {
-    settingsContainer.classList.toggle('hidden');
-    settingsBtn.classList.toggle('active');
+    const isOpening = settingsContainer.classList.contains('hidden');
+    
+    if (isOpening) {
+      // 設定を開くときは他を解除
+      settingsContainer.classList.remove('hidden');
+    } else {
+      settingsContainer.classList.add('hidden');
+    }
+    
     if (!settingsContainer.classList.contains('hidden')) {
       apiKeyInput.focus();
     }
@@ -1350,7 +1442,6 @@ function setupSettings() {
   // 閉じるボタン
   closeSettingsBtn.addEventListener('click', () => {
     settingsContainer.classList.add('hidden');
-    settingsBtn.classList.remove('active');
   });
 
 
@@ -1360,12 +1451,10 @@ function setupSettings() {
 
     if (!key) {
       chrome.storage.local.set({ geminiApiKey: '' }, () => {
-        showToast('APIキーを削除しました');
-        settingsContainer.classList.add('hidden');
       });
       return;
     }
-
+    
     saveKeyBtn.disabled = true;
     const originalText = saveKeyBtn.textContent;
     saveKeyBtn.textContent = '確認中...';
@@ -1379,12 +1468,12 @@ function setupSettings() {
       }
 
       chrome.storage.local.set({ geminiApiKey: key }, () => {
-        alert('APIキーは有効です。正常に保存されました。');
+        showAlert('APIキーは有効です。正常に保存されました。', '認証成功');
         showToast('APIキーを保存しました');
         settingsContainer.classList.add('hidden');
       });
     } catch (e) {
-      alert(getFriendlyErrorMessage(e));
+      showAlert(getFriendlyErrorMessage(e), 'エラー');
     } finally {
       saveKeyBtn.disabled = false;
       saveKeyBtn.textContent = originalText;
@@ -1408,7 +1497,7 @@ function setupSettings() {
           showToast('Gemini APIキーを入力して保存してください。');
           return;
         }
-        showToast('モデル一覧を取得中...');
+        // showToast('モデル一覧を取得中...');
         try {
           const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
           const data = await response.json();
@@ -1420,12 +1509,12 @@ function setupSettings() {
               .filter(m => m.supportedGenerationMethods?.includes('generateContent'))
               .map(m => m.name.replace('models/', ''))
               .join('\n');
-            alert("利用可能なモデル一覧:\n" + names);
+            showAlert("利用可能なモデル一覧:\n\n" + names, "モデル確認");
           } else {
-            alert("モデルが見つかりませんでした。");
+            showAlert("モデルが見つかりませんでした。", "モデル確認");
           }
         } catch (e) {
-          alert(getFriendlyErrorMessage(e));
+          showAlert(getFriendlyErrorMessage(e), "エラー");
         }
       });
     });
@@ -1447,7 +1536,7 @@ function setupFeatures() {
       "🌗 画面分割モード: タブとブックマークを左右に並べて表示できます。",
       "🛠️ ブラウジング補助: Xのサイドバー非表示やYouTubeの自動送りなどが可能です。"
     ];
-    alert("利用可能な機能一覧:\n\n" + features.join("\n\n"));
+    showAlert(features.join("\n\n"), "利用可能な機能一覧");
   });
 }
 
