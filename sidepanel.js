@@ -1786,6 +1786,50 @@ async function sendToGemini(base64Audio, apiKey, resultArea, statusDisplay, mode
   statusDisplay.style.color = 'var(--text-color, #333)';
 }
 
+/**
+ * サイトの性質（制限ページ、SNS、YouTube等）を確認し、必要に応じてユーザーに確認を行う
+ * @returns {Promise<boolean>} 処理を続行する場合は true
+ */
+async function checkSiteAndConfirm(resultArea, statusDisplay) {
+  // システムページ制限の事前チェック
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab || !tab.url) return false;
+
+  const url = tab.url.toLowerCase();
+  if (url.startsWith('chrome:') || url.startsWith('edge:') || url.startsWith('about:') || url.startsWith('chrome-extension:')) {
+    const friendlyMsg = '【制限】セキュリティ制限により取得できません。通常のウェブサイトで実行してください。';
+    resultArea.value = friendlyMsg;
+    showToast('内容を取得できませんでした');
+    statusDisplay.textContent = 'エラーが発生しました';
+    statusDisplay.style.display = 'block';
+    statusDisplay.style.color = 'var(--danger)';
+    return false;
+  }
+
+  // サイト別メッセージ表示判定
+  let confirmMsg = null;
+  const isYouTube = url.includes('youtube.com');
+  const isSNS = ['x.com', 'twitter.com'].some(d => url.includes(d));
+  const isAI = [
+    'chatgpt.com', 'claude.ai', 'gemini.google.com', 'copilot.microsoft.com',
+    'cloud.microsoft', 'deepseek.com', 'grok.com', 'perplexity.ai',
+    'mistral.ai', 'notebooklm.google.com', 'github.com', 'poe.com',
+    'v0.app', 'cursor.com'
+  ].some(d => url.includes(d));
+
+  if (isYouTube) {
+    confirmMsg = "YouTubeなどの動画サイトでは、動画そのものの内容（映像・音声）ではなく、現在画面上に表示されているテキスト情報（タイトル、説明、表示済みのコメント等）を取得します。\n\n続行しますか？";
+  } else if (isSNS || isAI) {
+    confirmMsg = "このページ（SNS、AIチャット、GitHubなど）は、表示に合わせてコンテンツが読み込まれます。\n\nやり取りが長い場合や無限スクロールのページでは、一番下までスクロールして全てのコンテンツを表示させてから実行することを推奨します。\n\n続行しますか？";
+  }
+
+  if (confirmMsg && !window.confirm(confirmMsg)) {
+    return false;
+  }
+
+  return true;
+}
+
 // ===========================
 // AIページ要約ツール
 // ===========================
@@ -1821,15 +1865,20 @@ function setupSummaryTool() {
   });
 
   // 要約実行
-  summaryBtn.addEventListener('click', async () => {
-    const res = await chrome.storage.local.get(['geminiApiKey']);
-    const apiKey = res.geminiApiKey;
-    if (!apiKey) {
-      resultArea.value = '設定（歯車アイコン）からGemini APIキーを入力して保存してください。';
-      return;
-    }
+    summaryBtn.addEventListener('click', async () => {
+      const res = await chrome.storage.local.get(['geminiApiKey']);
+      const apiKey = res.geminiApiKey;
+      if (!apiKey) {
+        resultArea.value = '設定（歯車アイコン）からGemini APIキーを入力して保存してください。';
+        return;
+      }
 
-    statusDisplay.textContent = 'ページ内容を取得中...';
+      // サイト別の確認・制限チェック
+      if (!await checkSiteAndConfirm(resultArea, statusDisplay)) {
+        return;
+      }
+
+      statusDisplay.textContent = 'ページ内容を取得中...';
     statusDisplay.style.display = 'block';
     resultArea.value = '';
 
@@ -1874,39 +1923,8 @@ function setupSummaryTool() {
   const copyMdBtn = document.getElementById('copyMdBtn');
   if (copyMdBtn) {
     copyMdBtn.addEventListener('click', async () => {
-      // システムページ制限の事前チェック
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab || !tab.url) return;
-
-      const url = tab.url.toLowerCase();
-      if (url.startsWith('chrome:') || url.startsWith('edge:') || url.startsWith('about:') || url.startsWith('chrome-extension:')) {
-        const friendlyMsg = '【制限】セキュリティ制限により取得できません。通常のウェブサイトで実行してください。';
-        resultArea.value = friendlyMsg;
-        showToast('内容を取得できませんでした');
-        statusDisplay.textContent = 'エラーが発生しました';
-        statusDisplay.style.display = 'block';
-        statusDisplay.style.color = 'var(--danger)';
-        return;
-      }
-
-      // サイト別メッセージ表示判定
-      let confirmMsg = null;
-      const isYouTube = url.includes('youtube.com');
-      const isSNS = ['x.com', 'twitter.com'].some(d => url.includes(d));
-      const isAI = [
-        'chatgpt.com', 'claude.ai', 'gemini.google.com', 'copilot.microsoft.com',
-        'cloud.microsoft', 'deepseek.com', 'grok.com', 'perplexity.ai',
-        'mistral.ai', 'notebooklm.google.com', 'github.com', 'poe.com',
-        'v0.app', 'cursor.com'
-      ].some(d => url.includes(d));
-
-      if (isYouTube) {
-        confirmMsg = "YouTubeなどの動画サイトでは、動画そのものの内容（映像・音声）ではなく、現在画面上に表示されているテキスト情報（タイトル、説明、表示済みのコメント等）を取得します。\n\n続行しますか？";
-      } else if (isSNS || isAI) {
-        confirmMsg = "このページ（SNS、AIチャット、GitHubなど）は、表示に合わせてコンテンツが読み込まれます。\n\nやり取りが長い場合や無限スクロールのページでは、一番下までスクロールして全てのコンテンツを表示させてから実行することを推奨します。\n\nコピーを続行しますか？";
-      }
-
-      if (confirmMsg && !window.confirm(confirmMsg)) {
+      // サイト別の確認・制限チェック
+      if (!await checkSiteAndConfirm(resultArea, statusDisplay)) {
         return;
       }
 
