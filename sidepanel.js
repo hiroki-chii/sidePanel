@@ -40,6 +40,26 @@ const dom = {
 // 初期化
 // ===========================
 document.addEventListener('DOMContentLoaded', async () => {
+  // 権限要求用のポップアップとして開かれた場合の処理
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('requestMic') === 'true') {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // 権限が取れたらすぐにトラックを停止
+      stream.getTracks().forEach(track => track.stop());
+      if (params.get('autoClose') === 'true') {
+        window.close();
+      }
+    } catch (err) {
+      console.error('マイク権限の取得に失敗しました:', err);
+      // エラー時も自動で閉じる設定なら、少し待ってから閉じる
+      if (params.get('autoClose') === 'true') {
+        setTimeout(() => window.close(), 1000);
+      }
+    }
+    return; // ポップアップ時は通常の初期化をスキップ（軽量化）
+  }
+
   setupNavigation();
   setupAddressBar();
   setupBookmarkAction();
@@ -1651,16 +1671,10 @@ function setupVoiceTool() {
       } catch (err) {
         console.error('マイクへのアクセスに失敗しました', err);
         if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-          // サイドパネルではプロンプトが出せないため、小さなポップアップを一時的に開いてダイアログを出す
-          resultArea.value = 'マイクの使用許可が必要です。一時的に開かれるポップアップで「許可」を選択してください。';
-          chrome.windows.create({
-            url: chrome.runtime.getURL('sidepanel.html?requestMic=true&autoClose=true'),
-            type: 'popup',
-            width: 1,
-            height: 1,
-            focused: true
-          });
-          statusDisplay.textContent = '許可待ち...';
+          const settingsUrl = `chrome://settings/content/siteDetails?site=chrome-extension://${chrome.runtime.id}`;
+          resultArea.value = `マイクの使用許可が必要です。以下のURLをコピーしてアドレスバーに貼り付け、設定画面からマイクを「許可」にしてください：\n\n${settingsUrl}\n\n（※サイドパネルでは直接許可ダイアログを表示できないブラウザの制限があるため、この操作が必要です）`;
+          statusDisplay.textContent = '設定でブロック中';
+          statusDisplay.style.color = 'var(--danger, red)';
         } else {
           resultArea.value = '録音を開始できませんでした: ' + err.message;
           statusDisplay.textContent = 'エラーが発生しました';

@@ -61,7 +61,7 @@
     "claude.ai": {
       shouldHandle(event) {
         return (event.target.tagName === "DIV" && event.target.contentEditable === "true") ||
-               event.target.tagName === "TEXTAREA";
+          event.target.tagName === "TEXTAREA";
       },
       onEnter(event) {
         event.preventDefault();
@@ -114,7 +114,7 @@
       shouldHandle(event) {
         const url = window.location.href;
         return url.startsWith("https://m365.cloud.microsoft/chat") &&
-               event.target.id === "m365-chat-editor-target-element";
+          event.target.id === "m365-chat-editor-target-element";
       },
       onEnter(event) {
         event.stopImmediatePropagation();
@@ -143,7 +143,7 @@
     "grok.com": {
       shouldHandle(event) {
         return event.target.tagName === "TEXTAREA" ||
-               (event.target.tagName === "DIV" && event.target.contentEditable === "true");
+          (event.target.tagName === "DIV" && event.target.contentEditable === "true");
       },
       onEnter(event) {
         event.stopImmediatePropagation();
@@ -174,9 +174,9 @@
     "chat.mistral.ai": {
       shouldHandle(event) {
         return (event.target.tagName === "DIV" &&
-                event.target.classList.contains("ProseMirror") &&
-                event.target.contentEditable === "true") ||
-               event.target.tagName === "TEXTAREA";
+          event.target.classList.contains("ProseMirror") &&
+          event.target.contentEditable === "true") ||
+          event.target.tagName === "TEXTAREA";
       },
       onEnter(event) {
         event.preventDefault();
@@ -210,7 +210,7 @@
       shouldHandle(event) {
         const url = window.location.href;
         return (url.startsWith("https://github.com/copilot") || url.startsWith("https://github.com/spark")) &&
-               event.target.tagName === "TEXTAREA";
+          event.target.tagName === "TEXTAREA";
       },
       onEnter(event) {
         event.stopImmediatePropagation();
@@ -234,9 +234,9 @@
     "v0.app": {
       shouldHandle(event) {
         return event.target.tagName === "TEXTAREA" ||
-               (event.target.tagName === "DIV" &&
-                event.target.classList.contains("ProseMirror") &&
-                event.target.contentEditable === "true");
+          (event.target.tagName === "DIV" &&
+            event.target.classList.contains("ProseMirror") &&
+            event.target.contentEditable === "true");
       },
       onEnter(event) {
         if (event.target.tagName === "TEXTAREA") {
@@ -260,10 +260,10 @@
       shouldHandle(event) {
         const url = window.location.href;
         return isCursorAgentsPath(url) &&
-               event.target.tagName === "DIV" &&
-               event.target.contentEditable === "true" &&
-               event.target.getAttribute("data-lexical-editor") === "true" &&
-               event.target.getAttribute("role") === "textbox";
+          event.target.tagName === "DIV" &&
+          event.target.contentEditable === "true" &&
+          event.target.getAttribute("data-lexical-editor") === "true" &&
+          event.target.getAttribute("role") === "textbox";
       },
       onEnter(event) {
         event.preventDefault();
@@ -336,7 +336,7 @@
   // --- Gemini Canvas Fullscreen ---
   function setupGeminiCanvasFullscreen() {
     if (window.location.hostname !== "gemini.google.com") return;
-    
+
     // 読み込み確認ログ（早期に出力）
     console.log("[GeminiCanvasFullscreen] スクリプトが開始されました。URL:", window.location.href);
 
@@ -405,18 +405,18 @@
       const anchor = findAnchor();
       if (!anchor) return;
 
-      const header = anchor.closest('[role="toolbar"]') || 
-                     anchor.closest('div[class*="toolbar"]') || 
-                     anchor.closest('div[class*="header"]') ||
-                     anchor.parentElement;
-      
+      const header = anchor.closest('[role="toolbar"]') ||
+        anchor.closest('div[class*="toolbar"]') ||
+        anchor.closest('div[class*="header"]') ||
+        anchor.parentElement;
+
       if (!header || header.querySelector(".g-full-btn")) return;
 
       console.log("[GeminiCanvasFullscreen] ボタンを注入します。");
 
       const btn = document.createElement("button");
       btn.className = "g-full-btn";
-      btn.title = "全画面表示切り替え (Tab & Bookmark Panel)";
+      btn.title = "全画面表示切り替え (拡張機能「Tab & Bookmark Panel」により表示されています。)";
       btn.innerHTML = `
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
@@ -427,15 +427,15 @@
         e.preventDefault();
         e.stopPropagation();
         const isFull = document.body.classList.toggle("g-canvas-full");
-        
+
         // コンテナの特定
         const currentAnchor = findAnchor();
         if (!currentAnchor) return;
-        
-        const header = currentAnchor.closest('[role="toolbar"]') || 
-                       currentAnchor.closest('div[class*="toolbar"]') || 
-                       currentAnchor.closest('div[class*="header"]') ||
-                       currentAnchor.parentElement;
+
+        const header = currentAnchor.closest('[role="toolbar"]') ||
+          currentAnchor.closest('div[class*="toolbar"]') ||
+          currentAnchor.closest('div[class*="header"]') ||
+          currentAnchor.parentElement;
 
         // ヘッダーから上に辿り、Canvas全体を包むコンテナ（高さがある要素）を探す
         let container = header;
@@ -446,7 +446,7 @@
           }
           container = container.parentElement;
         }
-        
+
         if (container) {
           console.log("[GeminiCanvasFullscreen] コンテナを全画面化:", container);
           container.classList.toggle("g-canvas-expanded", isFull);
@@ -468,7 +468,7 @@
     // 監視設定 (document_start に対応するため documentElement から開始)
     const observer = new MutationObserver(injectButton);
     observer.observe(document.documentElement, { childList: true, subtree: true });
-    
+
     // 定期的なフォールバック
     setInterval(injectButton, 3000);
   }
