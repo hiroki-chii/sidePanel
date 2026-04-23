@@ -36,6 +36,7 @@ const dom = {
   navFeatures: document.getElementById('navFeatures'),
   navMain: document.getElementById('navMain'),
   splitResizer: document.getElementById('splitResizer'),
+  addressSuggestions: document.getElementById('addressSuggestions'),
 };
 
 // ===========================
@@ -402,8 +403,18 @@ function setupAddressBar() {
   // 初期表示
   updateAddressBar();
 
+  // サジェスト機能のセットアップ
+  setupAddressSuggestions();
+
   dom.addressInput.addEventListener('keydown', async (e) => {
+    // サジェストが選択されている場合は、Enterでそのサジェストを確定する
+    // (setupAddressSuggestions 内の keydown で処理されるため、ここでは通常のEnter処理をガードする)
     if (e.key === 'Enter') {
+      const selected = dom.addressSuggestions.querySelector('.suggestion-item.selected');
+      if (selected && !dom.addressSuggestions.classList.contains('hidden')) {
+        return; // setupAddressSuggestions 側の Enter 処理に任せる
+      }
+
       const query = dom.addressInput.value.trim();
       if (!query) return;
 
@@ -424,6 +435,7 @@ function setupAddressBar() {
           await chrome.tabs.create({ url: targetUrl });
         }
         dom.addressInput.blur();
+        dom.addressSuggestions.classList.add('hidden');
       } catch (error) {
         console.error('ナビゲーションエラー:', error);
         if (targetUrl.startsWith('chrome://')) {
@@ -435,10 +447,187 @@ function setupAddressBar() {
     }
   });
 
-  // フォーカス時に全選択（使いやすさのため）
+  // フォーカス時に全選択
   dom.addressInput.addEventListener('focus', () => {
     dom.addressInput.select();
   });
+
+  // フォーカスが外れたらサジェストを隠す (少し遅延させてクリックイベントを優先)
+  dom.addressInput.addEventListener('blur', () => {
+    setTimeout(() => {
+      dom.addressSuggestions.classList.add('hidden');
+    }, 200);
+  });
+}
+
+/**
+ * アドレスバーのサジェスト機能
+ */
+function setupAddressSuggestions() {
+  if (!dom.addressInput || !dom.addressSuggestions) return;
+
+  let selectedIndex = -1;
+  let currentSuggestions = [];
+
+  const updateSelection = () => {
+    const items = dom.addressSuggestions.querySelectorAll('.suggestion-item');
+    items.forEach((item, index) => {
+      item.classList.toggle('selected', index === selectedIndex);
+      if (index === selectedIndex) {
+        item.scrollIntoView({ block: 'nearest' });
+      }
+    });
+  };
+
+  dom.addressInput.addEventListener('input', async () => {
+    const query = dom.addressInput.value.trim();
+    if (query.length < 1) {
+      dom.addressSuggestions.classList.add('hidden');
+      currentSuggestions = [];
+      return;
+    }
+
+    // 各ソースから検索 (個別にtry-catchして、一部のAPIが失敗しても他を表示できるようにする)
+    let tabs = [];
+    let history = [];
+    let bookmarks = [];
+
+    try {
+      [tabs, history, bookmarks] = await Promise.all([
+        chrome.tabs.query({}).catch(() => []),
+        (chrome.history ? chrome.history.search({ text: query, maxResults: 5 }).catch(() => []) : Promise.resolve([])),
+        chrome.bookmarks.search(query).catch(() => [])
+      ]);
+    } catch (err) {
+      console.error('サジェスト取得エラー:', err);
+    }
+
+    // フィルタリングと整形
+    const queryLower = query.toLowerCase();
+    
+    // タブ: タイトルまたはURLがマッチするもの
+    const tabResults = tabs
+      .filter(t => (t.title && t.title.toLowerCase().includes(queryLower)) || (t.url && t.url.toLowerCase().includes(queryLower)))
+      .slice(0, 3)
+      .map(t => ({ type: 'tab', title: t.title, url: t.url, tabId: t.id, windowId: t.windowId }));
+
+    // ブックマーク
+    const bookmarkResults = (bookmarks || [])
+      .filter(b => b.url)
+      .slice(0, 3)
+      .map(b => ({ type: 'bookmark', title: b.title, url: b.url }));
+
+    // 履歴
+    const historyResults = (history || [])
+      .filter(h => h.url)
+      .map(h => ({ type: 'history', title: h.title || h.url, url: h.url }));
+
+    // 重複削除 (URLをキーにする)
+    const seenUrls = new Set();
+    // 現在のタブは除外（URLが一致する場合）
+    try {
+      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (activeTab) seenUrls.add(activeTab.url);
+    } catch (e) {}
+
+    currentSuggestions = [...tabResults, ...bookmarkResults, ...historyResults]
+      .filter(item => {
+        if (!item.url) return false;
+        if (seenUrls.has(item.url)) return false;
+        seenUrls.add(item.url);
+        return true;
+      })
+      .slice(0, 10);
+
+    renderSuggestions(currentSuggestions);
+    selectedIndex = -1;
+  });
+
+  dom.addressInput.addEventListener('keydown', (e) => {
+    if (dom.addressSuggestions.classList.contains('hidden')) return;
+
+    const items = dom.addressSuggestions.querySelectorAll('.suggestion-item');
+    if (items.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedIndex = (selectedIndex + 1) % items.length;
+      updateSelection();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+      updateSelection();
+    } else if (e.key === 'Enter') {
+      if (selectedIndex >= 0) {
+        e.preventDefault();
+        handleSuggestionSelect(currentSuggestions[selectedIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      dom.addressSuggestions.classList.add('hidden');
+    }
+  });
+
+  function renderSuggestions(suggestions) {
+    if (suggestions.length === 0) {
+      dom.addressSuggestions.classList.add('hidden');
+      return;
+    }
+
+    dom.addressSuggestions.innerHTML = suggestions.map((s, i) => `
+      <div class="suggestion-item ${s.type}" data-index="${i}">
+        <div class="suggestion-icon">
+          ${getSuggestionIcon(s.type)}
+        </div>
+        <div class="suggestion-info">
+          <div class="suggestion-title">${escapeHTML(s.title || '無題')}</div>
+          <div class="suggestion-url">${escapeHTML(s.url)}</div>
+        </div>
+        <div class="suggestion-type">${getSuggestionTypeText(s.type)}</div>
+      </div>
+    `).join('');
+
+    dom.addressSuggestions.classList.remove('hidden');
+
+    // クリックイベント
+    dom.addressSuggestions.querySelectorAll('.suggestion-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const index = parseInt(item.dataset.index);
+        handleSuggestionSelect(suggestions[index]);
+      });
+    });
+  }
+
+  async function handleSuggestionSelect(suggestion) {
+    dom.addressSuggestions.classList.add('hidden');
+    dom.addressInput.blur();
+
+    if (suggestion.type === 'tab') {
+      // タブ切り替え
+      await chrome.tabs.update(suggestion.tabId, { active: true });
+      await chrome.windows.update(suggestion.windowId, { focused: true });
+    } else {
+      // ページ遷移
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab) {
+        await chrome.tabs.update(tab.id, { url: suggestion.url });
+      } else {
+        await chrome.tabs.create({ url: suggestion.url });
+      }
+    }
+    updateAddressBar();
+  }
+
+  function getSuggestionIcon(type) {
+    if (type === 'tab') return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>';
+    if (type === 'bookmark') return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+  }
+
+  function getSuggestionTypeText(type) {
+    if (type === 'tab') return 'タブ';
+    if (type === 'bookmark') return 'ブックマーク';
+    return '履歴';
+  }
 }
 
 function setupBookmarkAction() {
