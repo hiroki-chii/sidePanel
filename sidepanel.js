@@ -33,6 +33,7 @@ const dom = {
   bookmarksEmpty: document.getElementById('bookmarksEmpty'),
   bookmarkPageBtn: document.getElementById('bookmarkPageBtn'),
   navTools: document.getElementById('navTools'),
+  navFeatures: document.getElementById('navFeatures'),
   splitResizer: document.getElementById('splitResizer'),
 };
 
@@ -75,6 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupBookmarkListeners();
   loadToolsSettings();
   setupSettings(); // 設定パネルの初期化
+  setupFeatures(); // 機能一覧パネルの初期化
   setupVoiceTool();
   setupSummaryTool(); // ページ要約ツールの初期化
 });
@@ -326,7 +328,7 @@ function switchTab(tab) {
   state.activeTab = tab;
   // ツール選択時は分割表示を無効化、それ以外は有効化
   state.isSplitView = (tab !== 'tools');
-  
+
   applySplitView();
 
   // ツールボタンのアクティブ状態を更新
@@ -1338,15 +1340,19 @@ function setupSettings() {
   // 設定ボタンのクリックで表示/非表示を切り替え
   settingsBtn.addEventListener('click', () => {
     settingsContainer.classList.toggle('hidden');
+    settingsBtn.classList.toggle('active');
     if (!settingsContainer.classList.contains('hidden')) {
       apiKeyInput.focus();
     }
   });
 
+
   // 閉じるボタン
   closeSettingsBtn.addEventListener('click', () => {
     settingsContainer.classList.add('hidden');
+    settingsBtn.classList.remove('active');
   });
+
 
   // APIキーを保存
   saveKeyBtn.addEventListener('click', async () => {
@@ -1426,8 +1432,29 @@ function setupSettings() {
   }
 }
 
+/**
+ * 機能一覧のセットアップ
+ */
+function setupFeatures() {
+  if (!dom.navFeatures) return;
+
+  dom.navFeatures.addEventListener('click', () => {
+    const features = [
+      "🔍 タブ管理: 開いているタブを一覧表示し、即座に切り替えが可能です。",
+      "🔖 ブックマーク: ブラウザのブックマークをツリー形式で表示・管理できます。",
+      "🎙️ AI音声入力: Geminiを使用して、音声を最適な文章へ変換します。",
+      "📄 AIページ要約: 閲覧中のWebページの内容を一瞬で要約します。",
+      "🌗 画面分割モード: タブとブックマークを左右に並べて表示できます。",
+      "🛠️ ブラウジング補助: Xのサイドバー非表示やYouTubeの自動送りなどが可能です。"
+    ];
+    alert("利用可能な機能一覧:\n\n" + features.join("\n\n"));
+  });
+}
+
+
 // ===========================
 // AI音声入力ツール
+
 // ===========================
 let mediaRecorder = null;
 let audioChunks = [];
@@ -1879,20 +1906,20 @@ function setupSummaryTool() {
   });
 
   // 要約実行
-    summaryBtn.addEventListener('click', async () => {
-      const res = await chrome.storage.local.get(['geminiApiKey']);
-      const apiKey = res.geminiApiKey;
-      if (!apiKey) {
-        resultArea.value = '設定（歯車アイコン）からGemini APIキーを入力して保存してください。';
-        return;
-      }
+  summaryBtn.addEventListener('click', async () => {
+    const res = await chrome.storage.local.get(['geminiApiKey']);
+    const apiKey = res.geminiApiKey;
+    if (!apiKey) {
+      resultArea.value = '設定（歯車アイコン）からGemini APIキーを入力して保存してください。';
+      return;
+    }
 
-      // サイト別の確認・制限チェック
-      if (!await checkSiteAndConfirm(resultArea, statusDisplay)) {
-        return;
-      }
+    // サイト別の確認・制限チェック
+    if (!await checkSiteAndConfirm(resultArea, statusDisplay)) {
+      return;
+    }
 
-      statusDisplay.textContent = 'ページ内容を取得中...';
+    statusDisplay.textContent = 'ページ内容を取得中...';
     statusDisplay.style.display = 'block';
     resultArea.value = '';
 
