@@ -91,8 +91,6 @@ function applySplitView() {
     renderTabs();
     renderBookmarks();
     applySplitRatio(); // 比率を適用
-  } else {
-    switchTab(state.activeTab);
   }
 }
 
@@ -305,33 +303,30 @@ async function updateNavButtonsStatus() {
 // ===========================
 
 function switchTab(tab) {
+  state.activeTab = tab;
   // ツール選択時は分割表示を無効化、それ以外は有効化
   state.isSplitView = (tab !== 'tools');
+  
   applySplitView();
-
-  state.activeTab = tab;
 
   // ツールボタンのアクティブ状態を更新
   if (dom.navTools) {
     dom.navTools.classList.toggle('active', tab === 'tools');
   }
 
+  // 個別パネルの表示切替（分割モード外の場合）
+  if (!state.isSplitView) {
+    dom.tabsPanel.classList.remove('active');
+    dom.bookmarksPanel.classList.remove('active');
+    if (dom.toolsPanel) dom.toolsPanel.classList.add('active');
 
-  // パネルの表示切替
-  dom.tabsPanel.classList.toggle('active', tab === 'tabs');
-  dom.bookmarksPanel.classList.toggle('active', tab === 'bookmarks');
-  if (dom.toolsPanel) dom.toolsPanel.classList.toggle('active', tab === 'tools');
-
-  const addressBar = document.getElementById('addressBarContainer');
-  if (addressBar) {
-    addressBar.style.display = tab === 'tools' ? 'none' : 'flex';
-  }
-
-  // コンテンツを再描画
-  if (tab === 'tabs') {
-    renderTabs();
-  } else if (tab === 'bookmarks') {
-    renderBookmarks();
+    const addressBar = document.getElementById('addressBarContainer');
+    if (addressBar) addressBar.style.display = 'none';
+  } else {
+    // 分割モード時は両方表示
+    dom.tabsPanel.classList.add('active');
+    dom.bookmarksPanel.classList.add('active');
+    if (dom.toolsPanel) dom.toolsPanel.classList.remove('active');
   }
 
   // 選択状態を保存
