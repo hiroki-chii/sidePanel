@@ -423,7 +423,7 @@ body {
 .content.split-mode #tabsPanel.favicon-only .tab-item-info,
 .content.split-mode #tabsPanel.favicon-only .tab-item-url,
 .content.split-mode #tabsPanel.favicon-only .close-btn,
-.content.split-mode #tabsPanel.favicon-only .volume-control,
+.content.split-mode #tabsPanel.favicon-only .mute-control,
 .content.split-mode #tabsPanel.favicon-only .pin-badge {
   display: none !important;
 }
@@ -663,8 +663,8 @@ body {
   color: var(--warning);
 }
 
-/* ボリュームコントロール */
-.tab-item .volume-control {
+/* ミュートコントロール */
+.tab-item .mute-control {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -676,8 +676,8 @@ body {
   padding-right: 4px;
 }
 
-/* 再生中または調整済みのタブに表示 */
-.tab-item.show-volume .volume-control {
+/* 再生中またはミュート中のタブに表示 */
+.tab-item.show-mute .mute-control {
   opacity: 1;
   pointer-events: auto;
   visibility: visible;
@@ -732,43 +732,7 @@ body {
   height: 14px;
 }
 
-.tab-item .volume-slider {
-  width: 50px;
-  height: 4px;
-  -webkit-appearance: none;
-  background: var(--bg-tertiary);
-  border-radius: 2px;
-  outline: none;
-  cursor: pointer;
-  transition: all var(--transition-base);
-  padding: 0;
-  margin: 0;
-}
 
-.tab-item .volume-slider:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.tab-item .volume-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 10px;
-  height: 10px;
-  background: var(--accent);
-  border-radius: 50%;
-  cursor: pointer;
-  box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
-  transition: transform var(--transition-fast);
-}
-
-.tab-item .volume-slider:disabled::-webkit-slider-thumb {
-  background: var(--text-muted);
-  cursor: default;
-}
-
-.tab-item .volume-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-}
 
 /* ===========================
    ウィンドウセパレーター

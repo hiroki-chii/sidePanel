@@ -13,7 +13,6 @@ const state = {
   tabs: [],
   bookmarks: [],
   openFolderIds: new Set(), // 開いているフォルダのIDを保持
-  tabVolumes: {}, // tabId -> volume (0-100)
   isSplitView: true, // 分割表示モード (固定)
   splitRatio: 50, // 分割比率 (0-100)
 };
@@ -486,11 +485,6 @@ function setupTabListeners() {
       updateAddressBar();
       updateNavButtonsStatus(); // 戻る・進むボタンの状態も更新
     }
-
-    // 保存された音量があれば再適用
-    if (changeInfo.status === 'complete' && state.tabVolumes[tabId] !== undefined) {
-      setTabVolume(tabId, state.tabVolumes[tabId]);
-    }
   });
 
   // タブのアクティブ変更
@@ -594,47 +588,6 @@ function renderTabs() {
       });
     }
 
-    const volumeSlider = el.querySelector('.volume-slider');
-    const volumeControl = el.querySelector('.volume-control');
-
-    if (volumeSlider && volumeControl) {
-      volumeSlider.addEventListener('input', (e) => {
-        const volume = parseInt(e.target.value);
-        volumeControl.title = `音量: ${volume}%`;
-        setTabVolume(tabId, volume);
-      });
-
-      // 並び替え（D&D）との干渉を防ぐガード
-      // ボリューム操作エリアに入ったら親のドラッグを無効化
-      volumeControl.addEventListener('mouseenter', () => {
-        el.draggable = false;
-      });
-      volumeControl.addEventListener('mouseleave', () => {
-        el.draggable = true;
-      });
-
-      volumeSlider.addEventListener('mousedown', (e) => e.stopPropagation());
-      volumeSlider.addEventListener('click', (e) => e.stopPropagation());
-    }
-
-    // タブ全体でのマウスホイール調整
-    el.addEventListener('wheel', (e) => {
-      if (!volumeSlider || volumeSlider.disabled) return;
-
-      // 他のスクロールを阻害しないよう、ボリュームコントロールが表示されている場合のみ奪う
-      if (el.classList.contains('show-volume')) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const step = 5;
-        let newValue = parseInt(volumeSlider.value) + (e.deltaY < 0 ? step : -step);
-        newValue = Math.max(0, Math.min(100, newValue));
-
-        volumeSlider.value = newValue;
-        volumeSlider.dispatchEvent(new Event('input'));
-      }
-    }, { passive: false });
-
     const muteBtn = el.querySelector('.mute-btn');
     if (muteBtn) {
       muteBtn.addEventListener('click', async (e) => {
@@ -735,11 +688,10 @@ function createTabItemHTML(tab) {
 
   const currentClass = tab.active ? ' current' : '';
 
-  // 表示条件: 再生中、ミュート中、または音量が100以外（調整済み）
+  // 表示条件: 再生中またはミュート中
   const isMuted = tab.mutedInfo?.muted;
-  const volume = state.tabVolumes[tab.id] !== undefined ? state.tabVolumes[tab.id] : 100;
-  const shouldShowVolume = tab.audible || isMuted || volume !== 100;
-  const showVolumeClass = shouldShowVolume ? ' show-volume' : '';
+  const shouldShowMute = tab.audible || isMuted;
+  const showMuteClass = shouldShowMute ? ' show-mute' : '';
   const mutedPlayingClass = (isMuted && tab.audible) ? ' muted-playing' : '';
 
   const muteIcon = isMuted
@@ -747,18 +699,17 @@ function createTabItemHTML(tab) {
     : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>`;
 
   return `
-    <div class="tab-item${currentClass}${showVolumeClass}${mutedPlayingClass}" data-tab-id="${tab.id}" data-window-id="${tab.windowId}" data-index="${tab.index}" draggable="true" title="${escapeHTML(tab.title || '新しいタブ')}">
+    <div class="tab-item${currentClass}${showMuteClass}${mutedPlayingClass}" data-tab-id="${tab.id}" data-window-id="${tab.windowId}" data-index="${tab.index}" draggable="true" title="${escapeHTML(tab.title || '新しいタブ')}">
       ${faviconHTML}
       <div class="tab-item-info">
         <div class="tab-item-title">${escapeHTML(tab.title || '新しいタブ')}</div>
         <div class="tab-item-url">${escapeHTML(getDisplayUrl(tab.url))}</div>
       </div>
       ${pinBadge}
-      <div class="volume-control" title="${isMuted ? 'ミュート中' : '音量: ' + volume + '%'}">
+      <div class="mute-control" title="${isMuted ? 'ミュート中' : '音声再生中'}">
         <button class="mute-btn${isMuted ? ' is-muted' : ''}" title="${isMuted ? 'ミュート解除' : 'ミュート'}">
           ${muteIcon}
         </button>
-        <input type="range" class="volume-slider" min="0" max="100" value="${volume}" ${isMuted ? 'disabled' : ''}>
       </div>
       <button class="close-btn" title="タブを閉じる">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -805,51 +756,7 @@ async function closeTab(tabId) {
   }
 }
 
-/**
- * タブの音量を調整する
- */
-async function setTabVolume(tabId, volume) {
-  try {
-    state.tabVolumes[tabId] = volume;
 
-    // スクリプトを実行して音量を変更
-    await chrome.scripting.executeScript({
-      target: { tabId: tabId },
-      func: (v) => {
-        const mediaElements = document.querySelectorAll('video, audio');
-        mediaElements.forEach(media => {
-          media.volume = v / 100;
-        });
-
-        // 新しく追加されるビデオ・オーディオ要素も監視（オブザーバー）
-        if (!window._volumeObserver) {
-          window._volumeObserver = new MutationObserver((mutations) => {
-            mutations.forEach(mutation => {
-              mutation.addedNodes.forEach(node => {
-                if (node.nodeName === 'VIDEO' || node.nodeName === 'AUDIO') {
-                  node.volume = window._currentVolume !== undefined ? window._currentVolume : 1.0;
-                }
-                if (node.querySelectorAll) {
-                  node.querySelectorAll('video, audio').forEach(m => {
-                    m.volume = window._currentVolume !== undefined ? window._currentVolume : 1.0;
-                  });
-                }
-              });
-            });
-          });
-          window._volumeObserver.observe(document.body, { childList: true, subtree: true });
-        }
-        window._currentVolume = v / 100;
-      },
-      args: [volume]
-    });
-  } catch (error) {
-    // セキュリティ制限ページなどは無視
-    if (!error.message.includes('cannot be scripted') && !error.message.includes('chrome://')) {
-      console.error('音量設定に失敗:', error);
-    }
-  }
-}
 
 // ===========================
 // ブックマーク管理
