@@ -1669,9 +1669,14 @@ function setupSettings() {
     }
   });
 
-  // 外側をクリックしたら閉じる（任意）
+  // 外側をクリックしたら閉じる
   document.addEventListener('mousedown', (e) => {
-    if (!settingsContainer.contains(e.target) && !settingsBtn.contains(e.target)) {
+    const customModal = document.getElementById('customModal');
+    // 設定パネル内、設定ボタン、カスタムダイアログ内、または機能一覧ボタンのクリックなら閉じない
+    if (!settingsContainer.contains(e.target) && 
+        !settingsBtn.contains(e.target) && 
+        (!customModal || !customModal.contains(e.target)) &&
+        (!dom.navFeatures || !dom.navFeatures.contains(e.target))) {
       settingsContainer.classList.add('hidden');
     }
   });
