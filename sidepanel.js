@@ -43,25 +43,6 @@ const dom = {
 // 初期化
 // ===========================
 document.addEventListener('DOMContentLoaded', async () => {
-  // 権限要求用のポップアップとして開かれた場合の処理
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('requestMic') === 'true') {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // 権限が取れたらすぐにトラックを停止
-      stream.getTracks().forEach(track => track.stop());
-      if (params.get('autoClose') === 'true') {
-        window.close();
-      }
-    } catch (err) {
-      console.error('マイク権限の取得に失敗しました:', err);
-      // エラー時も自動で閉じる設定なら、少し待ってから閉じる
-      if (params.get('autoClose') === 'true') {
-        setTimeout(() => window.close(), 1000);
-      }
-    }
-    return; // ポップアップ時は通常の初期化をスキップ（軽量化）
-  }
 
   setupNavigation();
   setupAddressBar();
@@ -77,9 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadBookmarks();
   setupBookmarkListeners();
   loadToolsSettings();
-  setupSettings(); // 設定パネルの初期化
   setupFeatures(); // 機能一覧パネルの初期化
-  setupVoiceTool();
   setupSummaryTool(); // ページ要約ツールの初期化
   setupCustomModal(); // カスタムダイアログの初期化
 
@@ -365,13 +344,6 @@ function switchTab(tab) {
   state.isSplitView = (tab !== 'tools');
 
   applySplitView();
-
-  // 設定パネルが開いている場合は閉じる（相互排律）
-  const settingsContainer = document.getElementById('settingsContainer');
-  const settingsBtn = document.getElementById('navSettings');
-  if (settingsContainer && !settingsContainer.classList.contains('hidden')) {
-    settingsContainer.classList.add('hidden');
-  }
 
   updateActiveButtons(tab);
 
@@ -1580,156 +1552,6 @@ function loadToolsSettings() {
   }
 }
 
-// ===========================
-// 設定管理 (Gemini API)
-// ===========================
-function setupSettings() {
-  const settingsBtn = document.getElementById('navSettings');
-  const closeSettingsBtn = document.getElementById('closeSettingsBtn');
-  const settingsContainer = document.getElementById('settingsContainer');
-  const apiKeyInput = document.getElementById('geminiApiKey');
-  const saveKeyBtn = document.getElementById('saveApiKeyBtn');
-  const modelSelect = document.getElementById('geminiModelSelect');
-
-  if (!settingsBtn || !settingsContainer || !apiKeyInput || !saveKeyBtn) return;
-
-  // 保存されているAPIキーとモデルを読み込む
-  chrome.storage.local.get(['geminiApiKey', 'geminiModel'], (result) => {
-    if (result.geminiApiKey) {
-      apiKeyInput.value = result.geminiApiKey;
-    }
-    if (result.geminiModel && modelSelect) {
-      modelSelect.value = result.geminiModel;
-    }
-  });
-
-  // モデルの変更を即時保存
-  if (modelSelect) {
-    modelSelect.addEventListener('change', () => {
-      chrome.storage.local.set({ geminiModel: modelSelect.value });
-      showToast('モデル設定を保存しました');
-    });
-  }
-
-  // 設定ボタンのクリックで表示/非表示を切り替え
-  settingsBtn.addEventListener('click', () => {
-    const isOpening = settingsContainer.classList.contains('hidden');
-
-    if (isOpening) {
-      // 設定を開くときは他を解除
-      settingsContainer.classList.remove('hidden');
-    } else {
-      settingsContainer.classList.add('hidden');
-    }
-
-    if (!settingsContainer.classList.contains('hidden')) {
-      apiKeyInput.focus();
-    }
-  });
-
-
-  // 閉じるボタン
-  closeSettingsBtn.addEventListener('click', () => {
-    settingsContainer.classList.add('hidden');
-  });
-
-
-  // APIキーを保存
-  saveKeyBtn.addEventListener('click', async () => {
-    const key = apiKeyInput.value.trim();
-
-    if (!key) {
-      chrome.storage.local.set({ geminiApiKey: '' }, () => {
-      });
-      return;
-    }
-
-    saveKeyBtn.disabled = true;
-    const originalText = saveKeyBtn.textContent;
-    saveKeyBtn.textContent = '確認中...';
-
-    try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw { status: response.status, message: data.error?.message || 'API Error' };
-      }
-
-      chrome.storage.local.set({ geminiApiKey: key }, () => {
-        showAlert('APIキーは有効です。正常に保存されました。', '認証成功');
-        showToast('APIキーを保存しました');
-        settingsContainer.classList.add('hidden');
-      });
-    } catch (e) {
-      showAlert(getFriendlyErrorMessage(e), 'エラー');
-    } finally {
-      saveKeyBtn.disabled = false;
-      saveKeyBtn.textContent = originalText;
-    }
-  });
-
-  // 外側をクリックしたら閉じる
-  document.addEventListener('mousedown', (e) => {
-    const customModal = document.getElementById('customModal');
-    // 設定パネル内、設定ボタン、カスタムダイアログ内、または機能一覧ボタンのクリックなら閉じない
-    if (!settingsContainer.contains(e.target) && 
-        !settingsBtn.contains(e.target) && 
-        (!customModal || !customModal.contains(e.target)) &&
-        (!dom.navFeatures || !dom.navFeatures.contains(e.target))) {
-      settingsContainer.classList.add('hidden');
-    }
-  });
-
-  // APIキー取得方法の確認
-  const getApiKeyBtn = document.getElementById('getApiKeyBtn');
-  if (getApiKeyBtn) {
-    getApiKeyBtn.addEventListener('click', () => {
-      const steps = [
-        "1. Google AI Studio (https://aistudio.google.com/app/apikey) にアクセスします。",
-        "2. 「Get API key」または「Create API key」ボタンをクリックしてキーを作成します。",
-        "3. 生成されたAPIキーをコピーします。",
-        "4. この設定画面の入力欄に貼り付けて「保存」をクリックしてください。",
-        "",
-        "※作成したキーは外部に公開しないようご注意ください。"
-      ];
-      showAlert(steps.join("\n"), "Gemini APIキーの取得方法");
-    });
-  }
-
-  // 利用可能なモデルの確認
-  const checkModelsBtn = document.getElementById('checkModelsBtn');
-  if (checkModelsBtn) {
-    checkModelsBtn.addEventListener('click', async () => {
-      chrome.storage.local.get(['geminiApiKey'], async (result) => {
-        const apiKey = result.geminiApiKey;
-        if (!apiKey) {
-          showToast('Gemini APIキーを入力して保存してください。');
-          return;
-        }
-        // showToast('モデル一覧を取得中...');
-        try {
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-          const data = await response.json();
-          if (!response.ok) {
-            throw { status: response.status, message: data.error?.message || 'API Error' };
-          }
-          if (data.models) {
-            const names = data.models
-              .filter(m => m.supportedGenerationMethods?.includes('generateContent'))
-              .map(m => m.name.replace('models/', ''))
-              .join('\n');
-            showAlert("利用可能なモデル一覧:\n\n" + names, "モデル確認");
-          } else {
-            showAlert("モデルが見つかりませんでした。", "モデル確認");
-          }
-        } catch (e) {
-          showAlert(getFriendlyErrorMessage(e), "エラー");
-        }
-      });
-    });
-  }
-}
 
 /**
  * 機能一覧のセットアップ
@@ -1742,8 +1564,6 @@ function setupFeatures() {
       "・タブ管理＆検索：開いているタブを一覧表示し、検索・切り替えが可能です。",
       "・タブ上から音声ミュート：タブの右にあるスピーカーアイコンをクリックすると、そのタブの音声をミュート/解除できます。",
       "・ブックマーク：ブラウザのブックマークをツリー形式で表示・管理できます。",
-      "・AI音声入力：Geminiを使用して、音声を最適な文章へ変換します。",
-      "・AIページ要約：閲覧中のWebページの内容を一瞬で要約します。",
       "・AIチャットの誤送信防止：AIチャットの誤送信を防ぎます。Ctrl+Enterを押すまでは送信されません。",
       "・Gemini Canvas拡張：Gemini Canvasのプレビューを全画面表示可能です。",
       "・ブラウジング補助：Xのサイドバー非表示やYouTubeの自動送りなどが可能です。"
@@ -1752,285 +1572,9 @@ function setupFeatures() {
   });
 }
 
-
 // ===========================
-// AI音声入力ツール
-
+// AIページ要約ツール
 // ===========================
-let mediaRecorder = null;
-let audioChunks = [];
-
-function setupVoiceTool() {
-  const voiceBtn = document.getElementById('voiceInputBtn');
-  const statusDisplay = document.getElementById('voiceStatus');
-  const resultArea = document.getElementById('voiceResultArea');
-  const voiceModeSelect = document.getElementById('voiceMode');
-
-  if (!voiceBtn || !voiceModeSelect) return;
-
-  // 折りたたみ制御
-  const voiceToolHeader = document.getElementById('voiceToolHeader');
-  const voiceToolGroup = voiceToolHeader ? voiceToolHeader.closest('.collapsible-group') : null;
-
-  if (voiceToolHeader && voiceToolGroup) {
-    chrome.storage.local.get(['voiceToolExpanded'], (result) => {
-      if (result.voiceToolExpanded) {
-        voiceToolGroup.classList.add('open');
-      }
-    });
-
-    voiceToolHeader.addEventListener('click', () => {
-      const isOpen = voiceToolGroup.classList.toggle('open');
-      chrome.storage.local.set({ voiceToolExpanded: isOpen });
-    });
-  }
-
-  // 保存されている設定を読み込む
-  chrome.storage.local.get(['voiceMode'], (result) => {
-    if (result.voiceMode) {
-      voiceModeSelect.value = result.voiceMode;
-    }
-  });
-
-  voiceModeSelect.addEventListener('change', () => {
-    chrome.storage.local.set({ voiceMode: voiceModeSelect.value });
-  });
-
-  // コピーボタンの処理
-  const copyBtn = document.getElementById('copyResultBtn');
-  if (copyBtn) {
-    copyBtn.addEventListener('click', () => {
-      const text = resultArea.value;
-      if (text) {
-        navigator.clipboard.writeText(text);
-        showToast('クリップボードにコピーしました');
-      }
-    });
-  }
-
-  // クリアボタンの処理
-  const clearBtn = document.getElementById('clearResultBtn');
-  if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
-      resultArea.value = '';
-      const previewArea = document.getElementById('voicePreviewArea');
-      if (previewArea) {
-        previewArea.innerHTML = '';
-      }
-      if (statusDisplay && statusDisplay.textContent === 'エラーが発生しました') {
-        statusDisplay.textContent = '待機中';
-        statusDisplay.style.color = 'var(--text-muted, #666)';
-      }
-    });
-  }
-
-  let isRecording = false;
-  let isVoiceCancelled = false;
-  let recordingStartTime = 0;
-  let audioCtx = null;
-  let analyser = null;
-  let animationId = null;
-
-  const gaugeContainer = document.getElementById('voiceVolumeGaugeContainer');
-  const gaugeBar = document.getElementById('voiceVolumeGaugeBar');
-
-  function startVisualizer(stream) {
-    try {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-
-      analyser = audioCtx.createAnalyser();
-      const source = audioCtx.createMediaStreamSource(stream);
-      source.connect(analyser);
-      analyser.fftSize = 256;
-
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-
-      gaugeContainer.classList.remove('hidden');
-
-      function updateGauge() {
-        if (!analyser) return;
-        analyser.getByteFrequencyData(dataArray);
-
-        // 音量の平均値を計算
-        let sum = 0;
-        for (let i = 0; i < bufferLength; i++) {
-          sum += dataArray[i];
-        }
-        const average = sum / bufferLength;
-
-        // スケールに変換（感度調整：128で最大。声の大きさで調整）
-        const scale = Math.min(average / 100, 1.2);
-        gaugeBar.style.transform = `scaleX(${scale})`;
-
-        animationId = requestAnimationFrame(updateGauge);
-      }
-      updateGauge();
-    } catch (err) {
-      console.error('Visualizer error:', err);
-    }
-  }
-
-  function stopVisualizer() {
-    if (animationId) {
-      cancelAnimationFrame(animationId);
-      animationId = null;
-    }
-    if (gaugeBar) {
-      gaugeBar.style.transform = 'scaleX(0)';
-    }
-    if (gaugeContainer) {
-      gaugeContainer.classList.add('hidden');
-    }
-    analyser = null;
-  }
-
-  const cancelBtn = document.getElementById('cancelVoiceBtn');
-  if (cancelBtn) {
-    cancelBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      isVoiceCancelled = true;
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-      }
-    });
-  }
-
-  voiceBtn.addEventListener('click', async () => {
-    if (!isRecording) {
-      isVoiceCancelled = false;
-      // 録音開始
-      const result = await chrome.storage.local.get(['geminiApiKey']);
-      const apiKey = result.geminiApiKey;
-      if (!apiKey) {
-        resultArea.value = '設定（歯車アイコン）からGemini APIキーを入力して保存してください。';
-        return;
-      }
-
-      try {
-        // 現在の権限状態を確認
-        const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
-
-        if (permissionStatus.state === 'denied') {
-          resultArea.value = 'マイクの使用がブラウザ設定でブロックされています。アドレスバーのアイコンから「許可」に設定し、ページを再読み込みしてください。';
-          statusDisplay.textContent = '設定でブロック中';
-          return;
-        }
-
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-        audioChunks = [];
-
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            audioChunks.push(event.data);
-          }
-        };
-
-        mediaRecorder.onstop = async () => {
-          // UIを元に戻す共通処理
-          voiceBtn.style.backgroundColor = 'var(--primary-color, #007bff)';
-          voiceBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 24px; height: 24px;"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
-          cancelBtn.classList.add('hidden');
-          copyBtn.classList.remove('hidden');
-          if (clearBtn) clearBtn.classList.remove('hidden');
-          stopVisualizer();
-
-          if (isVoiceCancelled) {
-            statusDisplay.textContent = '中止しました';
-            statusDisplay.style.color = 'var(--text-muted, #666)';
-            stream.getTracks().forEach(track => track.stop());
-            return;
-          }
-
-          const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-          const duration = (Date.now() - recordingStartTime) / 1000;
-
-          // 1.5秒未満は短すぎると判断して中断
-          if (duration < 1.5) {
-            statusDisplay.textContent = '待機中';
-            statusDisplay.style.color = 'var(--text-muted, #666)';
-            resultArea.value = '音声が短すぎます（1.5秒以上お話しください）。';
-            stream.getTracks().forEach(track => track.stop());
-            return;
-          }
-
-          statusDisplay.textContent = '認識・生成中...';
-          statusDisplay.style.color = 'var(--primary-color, #007bff)';
-
-          try {
-            const base64Data = await blobToBase64(audioBlob);
-            const mode = voiceModeSelect.value;
-            await sendToGemini(base64Data, apiKey, resultArea, statusDisplay, mode);
-          } catch (e) {
-            console.error('Gemini API Error:', e);
-            const friendlyMsg = getFriendlyErrorMessage(e);
-            resultArea.value = friendlyMsg;
-            statusDisplay.textContent = 'エラーが発生しました';
-            statusDisplay.style.color = 'var(--danger, red)';
-          }
-
-          // マイク解放
-          stream.getTracks().forEach(track => track.stop());
-        };
-
-        mediaRecorder.start();
-        isRecording = true;
-        recordingStartTime = Date.now();
-        startVisualizer(stream);
-
-        // 録音中の見た目
-        voiceBtn.style.backgroundColor = 'red';
-        voiceBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none" style="width: 24px; height: 24px;"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
-        statusDisplay.textContent = '録音中... (クリックで停止)';
-        statusDisplay.style.color = 'red';
-        resultArea.value = '';
-
-        // ボタンの切り替え
-        copyBtn.classList.add('hidden');
-        if (clearBtn) clearBtn.classList.add('hidden');
-        cancelBtn.classList.remove('hidden');
-
-      } catch (err) {
-        console.error('マイクへのアクセスに失敗しました', err);
-        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-          const settingsUrl = `chrome://settings/content/siteDetails?site=chrome-extension://${chrome.runtime.id}`;
-          resultArea.value = `マイクの使用許可が必要です。以下のURLをコピーしてアドレスバーに貼り付け、設定画面からマイクを「許可」にしてください：\n\n${settingsUrl}\n\n（※サイドパネルでは直接許可ダイアログを表示できないブラウザの制限があるため、この操作が必要です）`;
-          statusDisplay.textContent = '設定でブロック中';
-          statusDisplay.style.color = 'var(--danger, red)';
-        } else {
-          resultArea.value = '録音を開始できませんでした: ' + err.message;
-          statusDisplay.textContent = 'エラーが発生しました';
-        }
-      }
-    } else {
-      // 録音停止（通常）
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-      }
-      isRecording = false;
-    }
-  });
-}
-
-function blobToBase64(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      // "data:audio/webm;base64,xxxx" の "xxxx" 部分のみ取り出す
-      const dataUrl = reader.result;
-      const base64 = dataUrl.split(',')[1];
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
 
 function getFriendlyErrorMessage(error) {
   const message = (error.message || '').toLowerCase();
@@ -2056,76 +1600,6 @@ function getFriendlyErrorMessage(error) {
   }
 
   return `【エラー】処理中に問題が発生しました。\n(詳細: ${error.message || '不明なエラー'})`;
-}
-
-async function sendToGemini(base64Audio, apiKey, resultArea, statusDisplay, mode) {
-  const resultObj = await chrome.storage.local.get(['geminiModel']);
-  const modelId = resultObj.geminiModel || "gemini-3.1-flash-lite-preview";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
-
-  // 品質チェック用の共通指示
-  const qualityInstruction = "\n\n重要：提供された音声が極端に短い、またはノイズのみで情報が含まれていない、内容が聞き取り不能な場合は、指示に従って生成するのではなく、必ず「音声が短すぎるか、内容が聞き取れませんでした。もう一度お話しください。」というメッセージのみを出力してください。";
-
-  // モードに応じたプロンプトの出し分け
-  let promptText = "";
-  switch (mode) {
-    case 'summary':
-      promptText = "提供された音声を解析し、内容の要点を簡潔にまとめてください。主要なポイントを構造化されたMarkdown形式の箇条書きで出力してください。挨拶や解説は不要です。" + qualityInstruction;
-      break;
-    case 'business':
-      promptText = "提供された音声の内容を、ビジネスシーンでそのまま使える丁寧な敬語（です・ます調）の文章に変換してください。論理構成を整え、Markdown形式（見出しや引用を適宜使用）で自然なビジネス文書の形式で出力してください。解説は不要です。" + qualityInstruction;
-      break;
-    case 'minutes':
-      promptText = "提供された音声から詳細なMarkdown形式の議事録を作成してください。以下の項目を含めて整理してください：\n1. 内容の要旨\n2. 決定事項\n3. ネクストアクション（課題）\n項目ごとに分かりやすく構造化し、挨拶や余計な解説を省いて出力してください。" + qualityInstruction;
-      break;
-    case 'bullets':
-      promptText = "提供された音声の内容をすべて網羅的に箇条書きに分解して整理してください。情報の階層構造（親子関係）を意識して、論理的にネストされたMarkdown形式のリスト形式で出力してください。解説は不要です。" + qualityInstruction;
-      break;
-    case 'standard':
-    default:
-      promptText = "提供された音声を解析して、論理的で自然な文章に整えてください。「えー」「あのー」などのフィラーを取り除き、文脈を補完して読みやすくしてください。挨拶や余計な解説を省き、Markdown形式（改行や強調を適切に使用）で出力してください。" + qualityInstruction;
-      break;
-  }
-
-  const payload = {
-    contents: [
-      {
-        role: "user",
-        parts: [
-          {
-            text: promptText
-          },
-          {
-            inlineData: {
-              mimeType: "audio/webm",
-              data: base64Audio
-            }
-          }
-        ]
-      }
-    ]
-  };
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    const errorMsg = errorData.error?.message || 'API Error';
-    throw { status: response.status, message: errorMsg };
-  }
-
-  const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-
-  resultArea.value = text;
-  updateMarkdownPreview(resultArea.id.includes('voice') ? 'voice' : 'summary');
-
-  statusDisplay.textContent = '完了';
-  statusDisplay.style.color = 'var(--text-color, #333)';
 }
 
 /**
@@ -2172,18 +1646,14 @@ async function checkSiteAndConfirm(resultArea, statusDisplay) {
   return true;
 }
 
-// ===========================
-// AIページ要約ツール
-// ===========================
+
 function setupSummaryTool() {
-  const summaryBtn = document.getElementById('summarizeBtn');
   const copyBtn = document.getElementById('copySummaryBtn');
   const clearBtn = document.getElementById('clearSummaryBtn');
   const resultArea = document.getElementById('summaryResultArea');
   const statusDisplay = document.getElementById('summaryStatus');
-  const modeSelect = document.getElementById('summaryMode');
 
-  if (!summaryBtn || !resultArea || !modeSelect) return;
+  if (!resultArea) return;
 
   // 折りたたみ制御
   const header = document.getElementById('summaryToolHeader');
@@ -2198,70 +1668,30 @@ function setupSummaryTool() {
     });
   }
 
-  // 保存設定の読み込み
-  chrome.storage.local.get(['summaryMode'], (result) => {
-    if (result.summaryMode) modeSelect.value = result.summaryMode;
-  });
-  modeSelect.addEventListener('change', () => {
-    chrome.storage.local.set({ summaryMode: modeSelect.value });
-  });
-
-  // 要約実行
-  summaryBtn.addEventListener('click', async () => {
-    const res = await chrome.storage.local.get(['geminiApiKey']);
-    const apiKey = res.geminiApiKey;
-    if (!apiKey) {
-      resultArea.value = '設定（歯車アイコン）からGemini APIキーを入力して保存してください。';
-      return;
-    }
-
-    // サイト別の確認・制限チェック
-    if (!await checkSiteAndConfirm(resultArea, statusDisplay)) {
-      return;
-    }
-
-    statusDisplay.textContent = 'ページ内容を取得中...';
-    statusDisplay.style.display = 'block';
-    resultArea.value = '';
-
-    try {
-      const text = await getActiveTabText();
-      if (!text || text.trim().length < 20) {
-        throw new Error('ページのテキスト内容が不足しているか、取得できませんでした。');
-      }
-
-      statusDisplay.textContent = '要約を作成中...';
-      const mode = modeSelect.value;
-      await sendTextToGemini(text, apiKey, resultArea, statusDisplay, mode);
-    } catch (e) {
-      console.error('Summary Error:', e);
-      const friendlyMsg = getFriendlyErrorMessage(e);
-      resultArea.value = friendlyMsg;
-      statusDisplay.textContent = 'エラーが発生しました';
-      statusDisplay.style.color = 'var(--danger)';
-    }
-  });
-
   // コピー・クリア
-  copyBtn.addEventListener('click', () => {
-    if (resultArea.value) {
-      navigator.clipboard.writeText(resultArea.value);
-      showToast('クリップボードにコピーしました');
-    }
-  });
-  clearBtn.addEventListener('click', () => {
-    resultArea.value = '';
-    const previewArea = document.getElementById('summaryPreviewArea');
-    if (previewArea) {
-      previewArea.innerHTML = '';
-    }
-    if (statusDisplay && statusDisplay.textContent === 'エラーが発生しました') {
-      statusDisplay.style.display = 'none';
-      statusDisplay.textContent = '';
-    }
-  });
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      if (resultArea.value) {
+        navigator.clipboard.writeText(resultArea.value);
+        showToast('クリップボードにコピーしました');
+      }
+    });
+  }
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      resultArea.value = '';
+      const previewArea = document.getElementById('summaryPreviewArea');
+      if (previewArea) {
+        previewArea.innerHTML = '';
+      }
+      if (statusDisplay && statusDisplay.textContent === 'エラーが発生しました') {
+        statusDisplay.style.display = 'none';
+        statusDisplay.textContent = '';
+      }
+    });
+  }
 
-  // Markdown形式でコピー
+  // Markdown形式で取得
   const copyMdBtn = document.getElementById('copyMdBtn');
   if (copyMdBtn) {
     copyMdBtn.addEventListener('click', async () => {
@@ -2281,13 +1711,19 @@ function setupSummaryTool() {
         }
 
         const mdText = `# ${data.title}\nURL: ${data.url}\n\n---\n\n${data.text}`;
+
+        // テキストエリアに表示
+        resultArea.value = mdText;
+        updateMarkdownPreview();
+
+        // クリップボードにもコピー
         await navigator.clipboard.writeText(mdText);
 
-        showToast('MD形式でコピーしました');
-        statusDisplay.textContent = 'コピー完了';
+        showToast('MD形式で取得・コピーしました');
+        statusDisplay.textContent = '取得完了';
         statusDisplay.style.color = 'var(--text-primary)';
         setTimeout(() => {
-          if (statusDisplay.textContent === 'コピー完了') {
+          if (statusDisplay.textContent === '取得完了') {
             statusDisplay.style.display = 'none';
           }
         }, 3000);
@@ -2333,49 +1769,6 @@ async function getActiveTabText() {
   return data ? data.text : null;
 }
 
-async function sendTextToGemini(text, apiKey, resultArea, statusDisplay, mode) {
-  const resultObj = await chrome.storage.local.get(['geminiModel']);
-  const modelId = resultObj.geminiModel || "gemini-3.1-flash-lite-preview";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
-
-  let promptText = "";
-  switch (mode) {
-    case 'bullets':
-      promptText = "以下のウェブページの内容を、重要なポイントに絞って構造化されたMarkdown形式の箇条書き（ネスト形式）でまとめてください。解説や前段の挨拶は省き、本文のみを出力してください。\n\n内容:\n" + text;
-      break;
-    case 'detailed':
-      promptText = "以下のウェブページの内容を詳細にMarkdown形式で解説してください。見出し、強調、リスト等を使用して背景、主要な主張、結論、および注目すべき詳細を含めて丁寧に説明してください。\n\n内容:\n" + text;
-      break;
-    case 'summary':
-    default:
-      promptText = "以下のウェブページの内容をMarkdown形式で簡潔に要約してください。全体像がひと目で分かるようにまとめ、改行や強調を適切に使用してください。\n\n内容:\n" + text;
-      break;
-  }
-
-  const payload = {
-    contents: [{ role: "user", parts: [{ text: promptText }] }]
-  };
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw { status: response.status, message: errorData.error?.message || 'API Error' };
-  }
-
-  const data = await response.json();
-  const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-  resultArea.value = resultText;
-  updateMarkdownPreview('summary');
-  statusDisplay.textContent = '完了';
-  statusDisplay.style.color = 'var(--text-primary)';
-  setTimeout(() => { statusDisplay.style.display = 'none'; }, 3000);
-}
-
 // ===========================
 // マークダウン・ビューアー共有ロジック
 // ===========================
@@ -2383,9 +1776,9 @@ async function sendTextToGemini(text, apiKey, resultArea, statusDisplay, mode) {
 /**
  * プレビューの更新
  */
-function updateMarkdownPreview(group) {
-  const resultArea = document.getElementById(group === 'voice' ? 'voiceResultArea' : 'summaryResultArea');
-  const previewArea = document.getElementById(group === 'voice' ? 'voicePreviewArea' : 'summaryPreviewArea');
+function updateMarkdownPreview() {
+  const resultArea = document.getElementById('summaryResultArea');
+  const previewArea = document.getElementById('summaryPreviewArea');
 
   if (!resultArea || !previewArea) return;
 
@@ -2399,6 +1792,7 @@ function updateMarkdownPreview(group) {
   }
 }
 
+
 /**
  * 出力タブの切り替え
  */
@@ -2407,8 +1801,7 @@ function setupOutputTabs() {
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
       const mode = tab.dataset.mode;
-      const group = tab.dataset.group;
-      const targetId = tab.dataset.target;
+      const group = tab.dataset.group; // 'summary'
 
       // 同じグループのタブのアクティブ状態を更新
       document.querySelectorAll(`.output-tab[data-group="${group}"]`).forEach(t => {
@@ -2416,14 +1809,16 @@ function setupOutputTabs() {
       });
 
       // テキストエリアとプレビューの表示切替
-      const resultArea = document.getElementById(group === 'voice' ? 'voiceResultArea' : 'summaryResultArea');
-      const previewArea = document.getElementById(group === 'voice' ? 'voicePreviewArea' : 'summaryPreviewArea');
+      const resultArea = document.getElementById(`${group}ResultArea`);
+      const previewArea = document.getElementById(`${group}PreviewArea`);
+
+      if (!resultArea || !previewArea) return;
 
       if (mode === 'edit') {
         resultArea.classList.remove('hidden');
         previewArea.classList.add('hidden');
       } else {
-        updateMarkdownPreview(group);
+        updateMarkdownPreview();
         resultArea.classList.add('hidden');
         previewArea.classList.remove('hidden');
       }
@@ -2447,13 +1842,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setupOutputTabs();
 
-  // 要約や音声入力のテキストエリアが変更されたらプレビューも更新するようにイベントバインド
-  ['voiceResultArea', 'summaryResultArea'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.addEventListener('input', () => {
-        updateMarkdownPreview(id.includes('voice') ? 'voice' : 'summary');
-      });
-    }
-  });
+  // 要約のテキストエリアが変更されたらプレビューも更新するようにイベントバインド
+  const summaryEl = document.getElementById('summaryResultArea');
+  if (summaryEl) {
+    summaryEl.addEventListener('input', () => {
+      updateMarkdownPreview();
+    });
+  }
 });

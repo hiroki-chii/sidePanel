@@ -45,15 +45,7 @@
         </svg>
       </button>
 
-      <div class="nav-divider"></div>
 
-      <button id="navSettings" class="nav-btn" title="設定">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="3" />
-          <path
-            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-        </svg>
-      </button>
       <div class="nav-divider"></div>
 
       <button id="navFeatures" class="nav-btn" title="機能一覧">
@@ -72,46 +64,6 @@
         </svg>
       </button>
     </div>
-    </div>
-
-    <!-- 設定パネル -->
-    <div id="settingsContainer" class="settings-panel hidden">
-      <div class="settings-panel-header">
-        <span>設定 (Gemini API)</span>
-        <button id="closeSettingsBtn" class="close-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-      <div class="settings-panel-content">
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <input type="password" id="geminiApiKey" placeholder="Gemini APIキーを入力"
-            style="flex: 1; padding: 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;">
-          <button id="saveApiKeyBtn" class="action-btn" style="padding: 6px 12px; flex: none;"
-            title="APIキーを保存">保存</button>
-        </div>
-        <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 4px;">
-          <label for="geminiModelSelect"
-            style="font-size: 11px; color: var(--text-muted); margin-left: 2px;">使用モデル</label>
-          <select id="geminiModelSelect"
-            style="width: 100%; padding: 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px; outline: none; cursor: pointer;">
-            <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite (高速)</option>
-            <option value="gemini-3-flash-preview">Gemini 3.0 Flash</option>
-            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-          </select>
-        </div>
-        <div style="margin-top: 8px; display: flex; justify-content: flex-end; gap: 8px;">
-          <button id="getApiKeyBtn" class="action-btn" style="padding: 4px 8px; font-size: 11px;"
-            title="APIキーの取得方法を確認">取得方法</button>
-          <button id="checkModelsBtn" class="action-btn" style="padding: 4px 8px; font-size: 11px;"
-            title="利用可能なモデルを確認">モデル確認</button>
-        </div>
-        <p style="font-size: 10px; color: var(--text-muted); margin-top: 8px;">※APIキーと設定はブラウザに安全に保存されます。</p>
-      </div>
-    </div>
-    <!-- 機能一覧パネルはalert()で表示するため削除 -->
-
   </header>
 
   <!-- アドレスバー -->
@@ -203,107 +155,14 @@
         </label>
       </div>
 
-      <!-- AI音声入力ツール -->
-      <div class="settings-group collapsible-group">
-        <div class="setting-item collapsible-header" id="voiceToolHeader">
-          <div class="setting-info">
-            <div class="setting-title">AI音声入力 (Gemini)</div>
-            <div class="setting-desc">音声をGeminiでテキスト化・文章作成します</div>
-          </div>
-          <div class="chevron-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </div>
-        </div>
-        <div class="collapsible-content" id="voiceToolContent">
-          <div class="setting-item"
-            style="flex-direction: column; align-items: stretch; gap: 12px; padding: 12px; border-top: none;">
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-              <label for="voiceMode" style="font-size: 11px; color: var(--text-muted); margin-left: 2px;">モード設定</label>
-              <select id="voiceMode"
-                style="width: 100%; padding: 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-primary); font-size: 13px; cursor: pointer; outline: none;">
-                <option value="standard">標準（フィラー除去・整文）</option>
-                <option value="summary">要約（ポイント抽出）</option>
-                <option value="business">ビジネス（敬語・丁寧語）</option>
-                <option value="minutes">議事録（要旨・決定事項）</option>
-                <option value="bullets">箇条書き（構造化リスト）</option>
-              </select>
-            </div>
-            <div
-              style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 8px 0; gap: 8px;">
-              <button id="voiceInputBtn" class="action-btn"
-                style="width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0; background-color: var(--primary-color, #007bff); color: white; flex: none;"
-                title="録音開始">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  style="width: 24px; height: 24px;">
-                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                  <line x1="12" y1="19" x2="12" y2="23" />
-                  <line x1="8" y1="23" x2="16" y2="23" />
-                </svg>
-              </button>
-              <div id="voiceVolumeGaugeContainer" class="voice-volume-gauge-container hidden">
-                <div id="voiceVolumeGaugeBar" class="voice-volume-gauge-bar"></div>
-              </div>
-              <div style="display: flex; align-items: center; gap: 12px;">
-                <div id="voiceStatus" style="font-size: 12px; color: var(--text-muted, #666);">待機中</div>
-                <button id="copyResultBtn" class="action-btn"
-                  style="padding: 4px 8px; font-size: 11px; display: flex; align-items: center; gap: 4px; flex: none;"
-                  title="結果をコピー">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    style="width: 14px; height: 14px;">
-                    <rect x="9" y="9" width="13" height="13" rx="2" />
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                  </svg>
-                  <span>コピー</span>
-                </button>
-                <button id="clearResultBtn" class="action-btn"
-                  style="padding: 4px 8px; font-size: 11px; display: flex; align-items: center; gap: 4px; flex: none;"
-                  title="結果をクリア">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    style="width: 14px; height: 14px;">
-                    <path
-                      d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
-                  </svg>
-                  <span>クリア</span>
-                </button>
-                <button id="cancelVoiceBtn" class="action-btn hidden"
-                  style="padding: 4px 8px; font-size: 11px; display: flex; align-items: center; gap: 4px; flex: none; color: var(--danger); border-color: var(--danger);"
-                  title="録音をキャンセル">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    style="width: 14px; height: 14px;">
-                    <path d="M18 6 6 18M6 6l12 12" />
-                  </svg>
-                  <span>中止</span>
-                </button>
-              </div>
-            </div>
-            <div class="output-container">
-              <div class="output-header">
-                <div class="output-tabs">
-                  <button class="output-tab active" data-mode="edit" data-target="voiceResultArea"
-                    data-group="voice">編集</button>
-                  <button class="output-tab" data-mode="preview" data-target="voicePreviewArea"
-                    data-group="voice">表示</button>
-                </div>
-              </div>
-              <textarea id="voiceResultArea" rows="5" placeholder="認識結果やAIの回答がここに表示されます..."
-                style="width: 100%; border-radius: 0 0 var(--radius-md) var(--radius-md); border: 1px solid var(--border); border-top: none; background: var(--bg-tertiary); color: var(--text-primary); padding: 12px; resize: vertical; box-sizing: border-box; font-size: 13px; line-height: 1.6; outline: none;"></textarea>
-              <div id="voicePreviewArea" class="markdown-body hidden"
-                style="width: 100%; min-height: 100px; max-height: 400px; overflow-y: auto; border-radius: 0 0 var(--radius-md) var(--radius-md); border: 1px solid var(--border); border-top: none; background: var(--bg-tertiary); color: var(--text-primary); padding: 12px; box-sizing: border-box; font-size: 13px; line-height: 1.6;">
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- AIページ要約ツール -->
+
+      <!-- ページテキスト取得ツール -->
       <div class="settings-group collapsible-group">
         <div class="setting-item collapsible-header" id="summaryToolHeader">
           <div class="setting-info">
-            <div class="setting-title">AIページ要約 (Gemini)</div>
-            <div class="setting-desc">表示中のページ内容をGeminiで要約します</div>
+            <div class="setting-title">ページテキスト取得</div>
+            <div class="setting-desc">表示中のページ内容をMarkdown形式で取得・コピーします</div>
           </div>
           <div class="chevron-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -314,26 +173,9 @@
         <div class="collapsible-content" id="summaryToolContent">
           <div class="setting-item"
             style="flex-direction: column; align-items: stretch; gap: 12px; padding: 12px; border-top: none;">
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-              <label for="summaryMode"
-                style="font-size: 11px; color: var(--text-muted); margin-left: 2px;">モード設定</label>
-              <select id="summaryMode"
-                style="width: 100%; padding: 6px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-primary); font-size: 13px; cursor: pointer; outline: none;">
-                <option value="summary">標準要約</option>
-                <option value="bullets">箇条書きで要約</option>
-                <option value="detailed">詳細な解説</option>
-              </select>
-            </div>
-
-            <button id="summarizeBtn" class="action-btn"
+            
+            <button id="copyMdBtn" class="action-btn" title="ページ内容をMarkdown形式で取得"
               style="background-color: var(--accent); color: white; border-style: solid; border-color: var(--accent);">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
-              </svg>
-              <span>このページを要約する</span>
-            </button>
-
-            <button id="copyMdBtn" class="action-btn" title="ページ内容をMarkdown形式でコピー">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
                 <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
@@ -341,7 +183,7 @@
                 <path d="M9 10h6" />
                 <path d="M9 18h6" />
               </svg>
-              <span>テキストをMD形式でコピー</span>
+              <span>テキストをMD形式で取得</span>
             </button>
 
             <div id="summaryStatus"
@@ -367,6 +209,7 @@
                 <span>クリア</span>
               </button>
             </div>
+
             <div class="output-container">
               <div class="output-header">
                 <div class="output-tabs">
@@ -376,7 +219,7 @@
                     data-group="summary">表示</button>
                 </div>
               </div>
-              <textarea id="summaryResultArea" rows="8" placeholder="要約結果がここに表示されます..."
+              <textarea id="summaryResultArea" rows="8" placeholder="取得したテキストがここに表示されます..."
                 style="width: 100%; border-radius: 0 0 var(--radius-md) var(--radius-md); border: 1px solid var(--border); border-top: none; background: var(--bg-tertiary); color: var(--text-primary); padding: 12px; resize: vertical; box-sizing: border-box; font-size: 13px; line-height: 1.6; outline: none;"></textarea>
               <div id="summaryPreviewArea" class="markdown-body hidden"
                 style="width: 100%; min-height: 150px; max-height: 500px; overflow-y: auto; border-radius: 0 0 var(--radius-md) var(--radius-md); border: 1px solid var(--border); border-top: none; background: var(--bg-tertiary); color: var(--text-primary); padding: 12px; box-sizing: border-box; font-size: 13px; line-height: 1.6;">

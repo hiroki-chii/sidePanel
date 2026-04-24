@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Tab & Bookmark Panel",
-  "version": "1.1.0",
-  "description": "サイドパネルでタブとブックマークを効率的に管理。AIによるページ要約やボイス入力機能も搭載。",
+  "version": "1.2.0",
+  "description": "サイドパネルでタブとブックマークを効率的に管理。AIによるページ要約機能も搭載。",
   "permissions": [
     "sidePanel",
     "tabs",
@@ -10,7 +10,6 @@
     "history",
     "favicon",
     "storage",
-    "audioCapture",
     "scripting",
     "activeTab"
   ],
