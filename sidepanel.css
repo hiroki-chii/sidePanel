@@ -150,7 +150,7 @@ body {
   gap: var(--spacing-sm);
 }
 
-/* 繝壹�繧ｸ繝翫ン繧ｲ繝ｼ繧ｷ繝ｧ繝ｳ */
+/* 繝壹繧ｸ繝翫ン繧ｲ繝ｼ繧ｷ繝ｧ繝ｳ */
 .nav-bar {
   display: flex;
   align-items: center;
@@ -159,6 +159,14 @@ body {
 
 .nav-spacer {
   flex: 1;
+}
+
+.nav-divider {
+  width: 1px;
+  height: 14px;
+  background: var(--border);
+  margin: 0 4px;
+  flex-shrink: 0;
 }
 
 .nav-btn {

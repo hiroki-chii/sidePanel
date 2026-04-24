@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupVoiceTool();
   setupSummaryTool(); // ページ要約ツールの初期化
   setupCustomModal(); // カスタムダイアログの初期化
-  
+
   // 初期化時に全画面状態をチェック
   updateFullscreenHighlight();
 });
@@ -504,7 +504,7 @@ function setupAddressSuggestions() {
 
     // フィルタリングと整形
     const queryLower = query.toLowerCase();
-    
+
     // タブ: タイトルまたはURLがマッチするもの
     const tabResults = tabs
       .filter(t => (t.title && t.title.toLowerCase().includes(queryLower)) || (t.url && t.url.toLowerCase().includes(queryLower)))
@@ -528,7 +528,7 @@ function setupAddressSuggestions() {
     try {
       const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (activeTab) seenUrls.add(activeTab.url);
-    } catch (e) {}
+    } catch (e) { }
 
     currentSuggestions = [...tabResults, ...bookmarkResults, ...historyResults]
       .filter(item => {
@@ -1614,14 +1614,14 @@ function setupSettings() {
   // 設定ボタンのクリックで表示/非表示を切り替え
   settingsBtn.addEventListener('click', () => {
     const isOpening = settingsContainer.classList.contains('hidden');
-    
+
     if (isOpening) {
       // 設定を開くときは他を解除
       settingsContainer.classList.remove('hidden');
     } else {
       settingsContainer.classList.add('hidden');
     }
-    
+
     if (!settingsContainer.classList.contains('hidden')) {
       apiKeyInput.focus();
     }
@@ -1643,7 +1643,7 @@ function setupSettings() {
       });
       return;
     }
-    
+
     saveKeyBtn.disabled = true;
     const originalText = saveKeyBtn.textContent;
     saveKeyBtn.textContent = '確認中...';
@@ -1675,6 +1675,22 @@ function setupSettings() {
       settingsContainer.classList.add('hidden');
     }
   });
+
+  // APIキー取得方法の確認
+  const getApiKeyBtn = document.getElementById('getApiKeyBtn');
+  if (getApiKeyBtn) {
+    getApiKeyBtn.addEventListener('click', () => {
+      const steps = [
+        "1. Google AI Studio (https://aistudio.google.com/app/apikey) にアクセスします。",
+        "2. 「Get API key」または「Create API key」ボタンをクリックしてキーを作成します。",
+        "3. 生成されたAPIキーをコピーします。",
+        "4. この設定画面の入力欄に貼り付けて「保存」をクリックしてください。",
+        "",
+        "※作成したキーは外部に公開しないようご注意ください。"
+      ];
+      showAlert(steps.join("\n"), "Gemini APIキーの取得方法");
+    });
+  }
 
   // 利用可能なモデルの確認
   const checkModelsBtn = document.getElementById('checkModelsBtn');
@@ -1718,12 +1734,14 @@ function setupFeatures() {
 
   dom.navFeatures.addEventListener('click', () => {
     const features = [
-      "🔍 タブ管理: 開いているタブを一覧表示し、即座に切り替えが可能です。",
-      "🔖 ブックマーク: ブラウザのブックマークをツリー形式で表示・管理できます。",
-      "🎙️ AI音声入力: Geminiを使用して、音声を最適な文章へ変換します。",
-      "📄 AIページ要約: 閲覧中のWebページの内容を一瞬で要約します。",
-      "🌗 画面分割モード: タブとブックマークを左右に並べて表示できます。",
-      "🛠️ ブラウジング補助: Xのサイドバー非表示やYouTubeの自動送りなどが可能です。"
+      "・タブ管理＆検索：開いているタブを一覧表示し、検索・切り替えが可能です。",
+      "・タブ上から音声ミュート：タブの右にあるスピーカーアイコンをクリックすると、そのタブの音声をミュート/解除できます。",
+      "・ブックマーク：ブラウザのブックマークをツリー形式で表示・管理できます。",
+      "・AI音声入力：Geminiを使用して、音声を最適な文章へ変換します。",
+      "・AIページ要約：閲覧中のWebページの内容を一瞬で要約します。",
+      "・AIチャットの誤送信防止：AIチャットの誤送信を防ぎます。Ctrl+Enterを押すまでは送信されません。",
+      "・Gemini Canvas拡張：Gemini Canvasのプレビューを全画面表示可能です。",
+      "・ブラウジング補助：Xのサイドバー非表示やYouTubeの自動送りなどが可能です。"
     ];
     showAlert(features.join("\n\n"), "利用可能な機能一覧");
   });
