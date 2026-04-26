@@ -175,22 +175,27 @@ function applySplitRatio() {
     const tabWidth = contentWidth * (ratio / 100);
     const bookmarkWidth = contentWidth * ((100 - ratio) / 100);
 
-    // 新規タブボタンのテキスト制御
+    // 新規タブボタンのテキスト制御とモード判定
     const newTabBtn = document.getElementById('newTabBtn');
+    let currentMode = 'large';
     if (newTabBtn) {
       const btnText = newTabBtn.querySelector('.btn-text');
       if (btnText) {
         if (tabWidth > 165) {
           btnText.textContent = '新規タブを追加';
           btnText.style.display = 'inline';
+          currentMode = 'large';
         } else if (tabWidth > 130) {
           btnText.textContent = 'タブを追加';
           btnText.style.display = 'inline';
+          currentMode = 'normal';
         } else if (tabWidth > 95) {
           btnText.textContent = '追加';
           btnText.style.display = 'inline';
+          currentMode = 'compact';
         } else {
           btnText.style.display = 'none'; // ＋アイコンのみ
+          currentMode = 'minimal';
         }
       }
     }
@@ -199,17 +204,24 @@ function applySplitRatio() {
     const windowLabels = document.querySelectorAll('.window-separator-label');
     windowLabels.forEach(label => {
       const index = label.dataset.index;
-      if (tabWidth > 110) {
-        label.textContent = `Window ${index}`;
-      } else if (tabWidth > 80) {
-        label.textContent = `Win ${index}`;
+      if (currentMode === 'large' || currentMode === 'normal') {
+        label.textContent = `WINDOW ${index}`;
+      } else if (currentMode === 'compact') {
+        label.textContent = `WIN ${index}`;
       } else {
         label.textContent = `W ${index}`;
       }
     });
 
-    // 80px以下ならファビコンのみ
-    if (dom.tabsPanel) dom.tabsPanel.classList.toggle('favicon-only', tabWidth < 80);
+    // パネルの表示モードクラスを更新
+    if (dom.tabsPanel) {
+      dom.tabsPanel.classList.remove('mode-large', 'mode-normal', 'mode-compact', 'mode-minimal', 'favicon-only');
+      dom.tabsPanel.classList.add(`mode-${currentMode}`);
+      // 後方互換性のための favicon-only (必要な場合)
+      if (currentMode === 'minimal') dom.tabsPanel.classList.add('favicon-only');
+    }
+    
+    // ブックマークパネルは従来通りの判定を維持（または必要に応じて拡張）
     if (dom.bookmarksPanel) dom.bookmarksPanel.classList.toggle('favicon-only', bookmarkWidth < 80);
   }
 }

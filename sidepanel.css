@@ -504,6 +504,16 @@ body {
   padding-left: 0;
 }
 
+/* favicon-onlyモード時のフォルダ区切り線 */
+.content.split-mode #bookmarksPanel.favicon-only .bookmark-folder.open > .bookmark-folder-children::after {
+  content: "";
+  display: block;
+  height: 1px;
+  background: var(--border);
+  margin: 10px 20%;
+  opacity: 0.8;
+}
+
 .content.split-mode #bookmarksPanel.favicon-only .bookmark-item,
 .content.split-mode #bookmarksPanel.favicon-only .bookmark-folder-header {
   justify-content: center;
@@ -511,32 +521,56 @@ body {
 }
 
 /* 繧ｿ繝悶�繝輔ぃ繝薙さ繝ｳ縺ｮ縺ｿ陦ｨ遉ｺ繝｢繝ｼ繝� */
-.content.split-mode #tabsPanel.favicon-only .tab-item-info,
-.content.split-mode #tabsPanel.favicon-only .tab-item-url,
-.content.split-mode #tabsPanel.favicon-only .close-btn,
-.content.split-mode #tabsPanel.favicon-only .pin-btn,
-.content.split-mode #tabsPanel.favicon-only .mute-control,
-.content.split-mode #tabsPanel.favicon-only .pin-badge {
+/* タブの表示モード切り替え */
+
+/* ミニマルモード (ファビコンのみ) */
+.content.split-mode #tabsPanel.mode-minimal .tab-item-info,
+.content.split-mode #tabsPanel.mode-minimal .tab-item-url,
+.content.split-mode #tabsPanel.mode-minimal .close-btn,
+.content.split-mode #tabsPanel.mode-minimal .pin-btn,
+.content.split-mode #tabsPanel.mode-minimal .mute-control,
+.content.split-mode #tabsPanel.mode-minimal .pin-badge {
   display: none !important;
 }
 
-.content.split-mode #tabsPanel.favicon-only .tab-item {
+.content.split-mode #tabsPanel.mode-minimal .tab-item {
   justify-content: center;
   padding: 8px 0;
 }
 
-.content.split-mode #tabsPanel.favicon-only .panel-actions {
+.content.split-mode #tabsPanel.mode-minimal .panel-actions {
   justify-content: center;
   padding: 8px 4px;
 }
 
-.content.split-mode #tabsPanel.favicon-only .action-btn {
+.content.split-mode #tabsPanel.mode-minimal .action-btn {
   padding: 8px 0;
   min-height: auto;
 }
 
-.content.split-mode #tabsPanel.favicon-only .action-btn span {
+.content.split-mode #tabsPanel.mode-minimal .action-btn span {
   display: none;
+}
+
+/* コンパクトモード (ファビコン + ピン + 削除) */
+.content.split-mode #tabsPanel.mode-compact .tab-item {
+  justify-content: flex-start;
+  gap: 4px; /* アイコン同士の間隔を詰める */
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.content.split-mode #tabsPanel.mode-compact .tab-item-info,
+.content.split-mode #tabsPanel.mode-compact .tab-item-url,
+.content.split-mode #tabsPanel.mode-compact .mute-control {
+  display: none !important;
+}
+
+.content.split-mode #tabsPanel.mode-compact .pin-btn,
+.content.split-mode #tabsPanel.mode-compact .close-btn {
+  opacity: 1 !important; /* 常時表示 */
+  width: 20px; /* 少し小さめに */
+  height: 20px;
 }
 
 
@@ -732,14 +766,9 @@ body {
   color: var(--text-muted);
   cursor: pointer;
   border-radius: var(--radius-sm);
-  opacity: 0;
+  opacity: 1; /* 常に表示 */
   transition: all var(--transition-fast);
   flex-shrink: 0;
-}
-
-.tab-item:hover .close-btn,
-.tab-item:hover .pin-btn {
-  opacity: 1;
 }
 
 .tab-item .close-btn:hover {
@@ -846,9 +875,20 @@ body {
    繧ｦ繧｣繝ｳ繝峨え繧ｻ繝代Ξ繝ｼ繧ｿ繝ｼ
    =========================== */
 .window-separator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: var(--spacing-md) var(--spacing-md) var(--spacing-xs);
   margin-top: var(--spacing-xs);
-  text-align: center;
+}
+
+.window-separator::before,
+.window-separator::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+  opacity: 0.6;
 }
 
 .window-separator:first-child {
