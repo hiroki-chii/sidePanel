@@ -496,6 +496,7 @@ body {
 .content.split-mode #bookmarksPanel.favicon-only .bookmark-item-title,
 .content.split-mode #bookmarksPanel.favicon-only .bookmark-folder-name,
 .content.split-mode #bookmarksPanel.favicon-only .bookmark-folder-count,
+.content.split-mode #bookmarksPanel.favicon-only .bookmark-delete-btn,
 .content.split-mode #bookmarksPanel.favicon-only .folder-chevron {
   display: none !important;
 }
@@ -958,6 +959,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .bookmark-folder-count {
@@ -1038,6 +1040,39 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* ブックマーク・フォルダ削除ボタン */
+.bookmark-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.bookmark-item:hover .bookmark-delete-btn,
+.bookmark-folder-header:hover .bookmark-delete-btn {
+  opacity: 1;
+}
+
+.bookmark-delete-btn:hover {
+  background: var(--danger-hover);
+  color: var(--danger);
+}
+
+.bookmark-delete-btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 /* ===========================

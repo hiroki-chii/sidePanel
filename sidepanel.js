@@ -37,6 +37,7 @@ const dom = {
   navMain: document.getElementById('navMain'),
   splitResizer: document.getElementById('splitResizer'),
   addressSuggestions: document.getElementById('addressSuggestions'),
+  newFolderBtn: document.getElementById('newFolderBtn'),
 };
 
 // ===========================
@@ -57,6 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   switchTab(state.activeTab); // 保存されたタブに切り替え
   loadBookmarks();
   setupBookmarkListeners();
+  setupBookmarkFolderActions();
   loadToolsSettings();
   setupFeatures(); // 機能一覧パネルの初期化
   setupSummaryTool(); // ページ要約ツールの初期化
@@ -124,7 +126,7 @@ function setupResizer() {
 
     // 制約の適用
     const minTabWidth = 50; // 「新規タブを追加」が改行されない最小
-    const minBookmarkWidth = 50; // ファビコンが見える最小
+    const minBookmarkWidth = 60; // ファビコンが見える最小
 
     const minTabRatio = (minTabWidth / totalWidth) * 100;
     const minBookmarkRatio = (minBookmarkWidth / totalWidth) * 100;
@@ -178,8 +180,8 @@ function applySplitRatio() {
       currentMode = 'minimal';
     }
 
-    // ウィンドウセパレーターのラベル制御
-    const windowLabels = document.querySelectorAll('.window-separator-label');
+    // ウィンドウセパレーターのラベル制御（タブパネル内のみを対象にする）
+    const windowLabels = dom.tabsPanel.querySelectorAll('.window-separator-label');
     windowLabels.forEach(label => {
       const index = label.dataset.index;
       if (currentMode === 'large' || currentMode === 'normal') {
@@ -200,7 +202,16 @@ function applySplitRatio() {
     }
 
     // ブックマークパネルは従来通りの判定を維持（または必要に応じて拡張）
-    if (dom.bookmarksPanel) dom.bookmarksPanel.classList.toggle('favicon-only', bookmarkWidth < 80);
+    if (dom.bookmarksPanel) {
+      const isFaviconOnly = bookmarkWidth < 95;
+      dom.bookmarksPanel.classList.toggle('favicon-only', isFaviconOnly);
+
+      // ラベルの更新（×ボタンが消えるタイミングで FOLDER -> FLD に変更）
+      const bookmarkLabel = dom.bookmarksPanel.querySelector('.window-separator-label');
+      if (bookmarkLabel) {
+        bookmarkLabel.textContent = isFaviconOnly ? 'FLD' : 'FOLDER';
+      }
+    }
   }
 }
 
@@ -621,8 +632,9 @@ function setupBookmarkAction() {
         await chrome.bookmarks.remove(bookmarks[0].id);
         showToast('ブックマークから削除しました');
       } else {
-        // 存在しない場合は追加（「その他のブックマーク」等に追加される）
+        // 存在しない場合は追加（ブックマークバーに追加）
         await chrome.bookmarks.create({
+          parentId: '1',
           title: tab.title,
           url: tab.url,
         });
@@ -635,6 +647,37 @@ function setupBookmarkAction() {
       console.error('ブックマーク操作エラー:', error);
     }
   });
+}
+
+/**
+ * フォルダ作成の初期設定
+ */
+function setupBookmarkFolderActions() {
+  if (!dom.newFolderBtn) return;
+  dom.newFolderBtn.addEventListener('click', () => {
+    createBookmarkFolder();
+  });
+}
+
+/**
+ * フォルダの作成
+ */
+async function createBookmarkFolder(parentId = '1') {
+  const name = prompt('新しいフォルダの名前を入力してください:', '新規フォルダ');
+  if (name === null) return;
+
+  try {
+    await chrome.bookmarks.create({
+      parentId: parentId,
+      title: name || '新規フォルダ'
+    });
+    showToast('フォルダを作成しました');
+    // loadBookmarks() は setupBookmarkListeners のリスナーにより自動で呼ばれるはずだが、
+    // 念のためここでも呼ぶか、onCreated を待つ
+  } catch (error) {
+    console.error('フォルダ作成エラー:', error);
+    showToast('フォルダの作成に失敗しました');
+  }
 }
 
 async function updateBookmarkButton(url) {
@@ -1074,7 +1117,6 @@ function renderBookmarkNode(node) {
   if (node.children) {
     // フォルダ
     const childCount = countBookmarks(node);
-    if (childCount === 0 && !node.children.length) return '';
 
     let childrenHTML = '';
     node.children.forEach((child) => {
@@ -1095,6 +1137,13 @@ function renderBookmarkNode(node) {
           </svg>
           <span class="bookmark-folder-name">${escapeHTML(node.title || 'フォルダ')}</span>
           <span class="bookmark-folder-count">${childCount}</span>
+          ${node.parentId === '0' ? '' : `
+          <button class="bookmark-delete-btn" title="フォルダを削除">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6 6 18M6 6l12 12"/>
+            </svg>
+          </button>
+          `}
         </div>
         <div class="bookmark-folder-children">
           ${childrenHTML}
@@ -1118,6 +1167,11 @@ function createBookmarkItemHTML(node) {
     <div class="bookmark-item" data-bookmark-id="${node.id}" data-url="${escapeHTML(node.url)}" draggable="true" title="${escapeHTML(node.title || node.url)}">
       ${faviconHTML}
       <span class="bookmark-item-title">${escapeHTML(node.title || node.url)}</span>
+      <button class="bookmark-delete-btn" title="ブックマークを削除">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>
     </div>
   `;
 }
@@ -1125,9 +1179,10 @@ function createBookmarkItemHTML(node) {
 function bindBookmarkEvents() {
   // フォルダの開閉
   dom.bookmarksList.querySelectorAll('.bookmark-folder-header').forEach((header) => {
+    const folder = header.closest('.bookmark-folder');
+    const id = folder.dataset.bookmarkId;
+
     header.addEventListener('click', () => {
-      const folder = header.closest('.bookmark-folder');
-      const id = folder.dataset.bookmarkId;
       folder.classList.toggle('open');
 
       if (folder.classList.contains('open')) {
@@ -1137,12 +1192,27 @@ function bindBookmarkEvents() {
       }
       saveAppState(); // 状態を保存
     });
+
+    header.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      showBookmarkContextMenu(e, id, null); // url=null はフォルダを意味する
+    });
+
+    const deleteBtn = header.querySelector('.bookmark-delete-btn');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleBookmarkDelete(id, null);
+      });
+    }
   });
 
   // ブックマークのクリック
   dom.bookmarksList.querySelectorAll('.bookmark-item').forEach((item) => {
+    const id = item.dataset.bookmarkId;
+    const url = item.dataset.url;
+
     item.addEventListener('click', () => {
-      const url = item.dataset.url;
       if (url) {
         chrome.tabs.create({ url });
       }
@@ -1150,8 +1220,16 @@ function bindBookmarkEvents() {
 
     item.addEventListener('contextmenu', (e) => {
       e.preventDefault();
-      showBookmarkContextMenu(e, item.dataset.bookmarkId, item.dataset.url);
+      showBookmarkContextMenu(e, id, url);
     });
+
+    const deleteBtn = item.querySelector('.bookmark-delete-btn');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleBookmarkDelete(id, url);
+      });
+    }
   });
 
   // ドラッグ&ドロップのバインド
@@ -1415,36 +1493,47 @@ function showBookmarkContextMenu(e, bookmarkId, url) {
   const menu = document.createElement('div');
   menu.className = 'context-menu';
 
-  const items = [
-    {
-      label: '新しいタブで開く',
-      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
-      action: () => chrome.tabs.create({ url }),
-    },
-    {
+  const items = [];
+
+  if (url) {
+    items.push({
+      label: '現在のタブで開く',
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8.1 8.1 0 0 0-15.5-2m-.5-4v4h4a8.1 8.1 0 0 1 15.5 2m.5 4v-4h-4"/></svg>',
+      action: async () => {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab) {
+          await chrome.tabs.update(tab.id, { url });
+        } else {
+          await chrome.tabs.create({ url });
+        }
+      },
+    });
+    items.push({
       label: 'URLをコピー',
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
       action: () => {
         navigator.clipboard.writeText(url);
         showToast('URLをコピーしました');
       },
-    },
-    { divider: true },
-    {
-      label: 'ブックマークを削除',
-      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
-      action: async () => {
-        try {
-          await chrome.bookmarks.remove(bookmarkId);
-          await loadBookmarks();
-          showToast('ブックマークを削除しました');
-        } catch (error) {
-          console.error('ブックマークの削除に失敗:', error);
-        }
-      },
-      className: 'danger',
-    },
-  ];
+    });
+    items.push({ divider: true });
+  }
+
+  items.push({
+    label: url ? 'ブックマークを削除' : 'フォルダを削除',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+    action: () => handleBookmarkDelete(bookmarkId, url),
+    className: 'danger',
+  });
+
+  // フォルダの場合のみ「この中にフォルダを作成」を追加
+  if (!url) {
+    items.unshift({
+      label: 'この中にフォルダを作成',
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>',
+      action: () => createBookmarkFolder(bookmarkId),
+    });
+  }
 
   items.forEach((item) => {
     if (item.divider) {
@@ -1467,6 +1556,26 @@ function showBookmarkContextMenu(e, bookmarkId, url) {
   positionContextMenu(menu, e);
   document.body.appendChild(menu);
   contextMenu = menu;
+}
+
+/**
+ * ブックマーク・フォルダ削除の共通処理
+ */
+async function handleBookmarkDelete(bookmarkId, url) {
+  const confirmMsg = url ? 'このブックマークを削除しますか？' : 'このフォルダと中身をすべて削除しますか？';
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    if (url) {
+      await chrome.bookmarks.remove(bookmarkId);
+    } else {
+      await chrome.bookmarks.removeTree(bookmarkId);
+    }
+    showToast(url ? 'ブックマークを削除しました' : 'フォルダを削除しました');
+  } catch (error) {
+    console.error('削除に失敗:', error);
+    showToast('削除に失敗しました');
+  }
 }
 
 function positionContextMenu(menu, e) {
