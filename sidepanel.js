@@ -180,13 +180,13 @@ function applySplitRatio() {
     if (newTabBtn) {
       const btnText = newTabBtn.querySelector('.btn-text');
       if (btnText) {
-        if (tabWidth > 180) {
+        if (tabWidth > 165) {
           btnText.textContent = '新規タブを追加';
           btnText.style.display = 'inline';
-        } else if (tabWidth > 120) {
+        } else if (tabWidth > 130) {
           btnText.textContent = 'タブを追加';
           btnText.style.display = 'inline';
-        } else if (tabWidth > 80) {
+        } else if (tabWidth > 95) {
           btnText.textContent = '追加';
           btnText.style.display = 'inline';
         } else {
@@ -194,6 +194,19 @@ function applySplitRatio() {
         }
       }
     }
+
+    // ウィンドウセパレーターのラベル制御
+    const windowLabels = document.querySelectorAll('.window-separator-label');
+    windowLabels.forEach(label => {
+      const index = label.dataset.index;
+      if (tabWidth > 110) {
+        label.textContent = `Window ${index}`;
+      } else if (tabWidth > 80) {
+        label.textContent = `Win ${index}`;
+      } else {
+        label.textContent = `W ${index}`;
+      }
+    });
 
     // 80px以下ならファビコンのみ
     if (dom.tabsPanel) dom.tabsPanel.classList.toggle('favicon-only', tabWidth < 80);
@@ -770,9 +783,7 @@ function renderTabs() {
     if (windowIds.length > 1) {
       html += `
         <div class="window-separator">
-          <span class="window-separator-label">ウィンドウ ${index + 1}</span>
-          <div class="window-separator-line"></div>
-          <span class="window-separator-count">${tabs.length}</span>
+          <span class="window-separator-label" data-index="${index + 1}">ウィンドウ ${index + 1}</span>
         </div>
       `;
     }
@@ -807,6 +818,18 @@ function renderTabs() {
         e.stopPropagation();
         closeTab(tabId);
       });
+    }
+
+    const pinBtn = el.querySelector('.pin-btn');
+    if (pinBtn) {
+      pinBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const tab = state.tabs.find(t => t.id === tabId);
+        if (tab) {
+          await chrome.tabs.update(tabId, { pinned: !tab.pinned });
+        }
+      });
+      pinBtn.addEventListener('mousedown', (e) => e.stopPropagation());
     }
 
     const muteBtn = el.querySelector('.mute-btn');
@@ -903,9 +926,6 @@ function createTabItemHTML(tab) {
     ? `<img class="favicon" src="${escapeHTML(tab.favIconUrl)}" alt="">`
     : getFaviconPlaceholderHTML();
 
-  const pinBadge = tab.pinned
-    ? `<svg class="pin-badge" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>`
-    : '';
 
   const currentClass = tab.active ? ' current' : '';
 
@@ -926,12 +946,16 @@ function createTabItemHTML(tab) {
         <div class="tab-item-title">${escapeHTML(tab.title || '新しいタブ')}</div>
         <div class="tab-item-url">${escapeHTML(getDisplayUrl(tab.url))}</div>
       </div>
-      ${pinBadge}
       <div class="mute-control" title="${isMuted ? 'ミュート中' : '音声再生中'}">
         <button class="mute-btn${isMuted ? ' is-muted' : ''}" title="${isMuted ? 'ミュート解除' : 'ミュート'}">
           ${muteIcon}
         </button>
       </div>
+      <button class="pin-btn${tab.pinned ? ' is-pinned' : ''}" title="${tab.pinned ? 'ピン留め解除' : 'ピン留め'}">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/>
+        </svg>
+      </button>
       <button class="close-btn" title="タブを閉じる">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 6 6 18M6 6l12 12"/>

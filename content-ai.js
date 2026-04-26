@@ -389,12 +389,23 @@
     function findAnchor() {
       // プレビュー、コード、共有、または X ボタンを探す
       const targets = ["プレビュー", "Preview", "コード", "Code", "共有", "Share"];
+      // 優先度の高い順に並べる（共有はメニュー内に出やすいため後回し）
       const elements = document.querySelectorAll("button, [role='button'], [role='tab'], span, div");
-      for (const el of elements) {
-        const text = (el.innerText || el.textContent || "").trim();
-        if (targets.includes(text)) {
-          console.log("[GeminiCanvasFullscreen] アンカー要素を発見:", text);
-          return el;
+      
+      for (const targetText of targets) {
+        for (const el of elements) {
+          const text = (el.innerText || el.textContent || "").trim();
+          if (text === targetText) {
+            // メニュー内、またはポップアップ要素内は除外
+            if (el.closest('[role="menu"], [role="menuitem"], .mat-menu-panel, [class*="menu"], [class*="popup"]')) continue;
+            
+            // ツールバー、ヘッダー、または特定のボタン群の中にあるか確認
+            const isInsideHeader = el.closest('[role="toolbar"], div[class*="toolbar"], div[class*="header"], div[class*="Artifact"]');
+            if (isInsideHeader) {
+              console.log("[GeminiCanvasFullscreen] 有効なアンカー要素を発見:", text);
+              return el;
+            }
+          }
         }
       }
       return null;

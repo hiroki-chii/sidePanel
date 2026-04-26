@@ -514,6 +514,7 @@ body {
 .content.split-mode #tabsPanel.favicon-only .tab-item-info,
 .content.split-mode #tabsPanel.favicon-only .tab-item-url,
 .content.split-mode #tabsPanel.favicon-only .close-btn,
+.content.split-mode #tabsPanel.favicon-only .pin-btn,
 .content.split-mode #tabsPanel.favicon-only .mute-control,
 .content.split-mode #tabsPanel.favicon-only .pin-badge {
   display: none !important;
@@ -555,7 +556,8 @@ body {
 }
 
 .content.split-mode .tab-item-url {
-  display: none; /* 蟷�′迢ｭ縺�◆繧ゞRL縺ｯ髫�縺� */
+  display: none;
+  /* 蟷�′迢ｭ縺�◆繧ゞRL縺ｯ髫�縺� */
 }
 
 .content.split-mode .bookmark-folder-header,
@@ -617,6 +619,7 @@ body {
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition-fast);
+  white-space: nowrap;
 }
 
 .action-btn:hover {
@@ -717,7 +720,8 @@ body {
   line-height: 1.3;
 }
 
-.tab-item .close-btn {
+.tab-item .close-btn,
+.tab-item .pin-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -733,7 +737,8 @@ body {
   flex-shrink: 0;
 }
 
-.tab-item:hover .close-btn {
+.tab-item:hover .close-btn,
+.tab-item:hover .pin-btn {
   opacity: 1;
 }
 
@@ -742,12 +747,23 @@ body {
   color: var(--danger);
 }
 
-.tab-item .close-btn svg {
+.tab-item .pin-btn:hover {
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+.tab-item .pin-btn.is-pinned {
+  opacity: 1;
+  color: var(--warning);
+}
+
+.tab-item .close-btn svg,
+.tab-item .pin-btn svg {
   width: 14px;
   height: 14px;
 }
 
-/* 繝斐Φ逡吶ａ繝舌ャ繧ｸ */
+/* ピン留めバッジ（将来的な拡張用、現在はボタンに統合） */
 .tab-item .pin-badge {
   width: 12px;
   height: 12px;
@@ -830,11 +846,9 @@ body {
    繧ｦ繧｣繝ｳ繝峨え繧ｻ繝代Ξ繝ｼ繧ｿ繝ｼ
    =========================== */
 .window-separator {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
   padding: var(--spacing-md) var(--spacing-md) var(--spacing-xs);
   margin-top: var(--spacing-xs);
+  text-align: center;
 }
 
 .window-separator:first-child {
@@ -848,20 +862,6 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
-}
-
-.window-separator-line {
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-
-.window-separator-count {
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-  background: var(--bg-tertiary);
-  padding: 1px 6px;
-  border-radius: 10px;
 }
 
 /* ===========================
@@ -1628,6 +1628,7 @@ input:checked+.toggle-slider:before {
   transform-origin: center;
   transition: transform 0.1s ease-out;
 }
+
 /* ===========================
    カスタムモーダル
    =========================== */
@@ -1686,11 +1687,23 @@ input:checked+.toggle-slider:before {
 }
 
 @keyframes fadeInModal {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUpModal {
-  from { transform: translateY(10px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
