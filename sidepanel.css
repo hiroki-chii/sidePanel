@@ -538,19 +538,6 @@ body {
   padding: 8px 0;
 }
 
-.content.split-mode #tabsPanel.mode-minimal .panel-actions {
-  justify-content: center;
-  padding: 8px 4px;
-}
-
-.content.split-mode #tabsPanel.mode-minimal .action-btn {
-  padding: 8px 0;
-  min-height: auto;
-}
-
-.content.split-mode #tabsPanel.mode-minimal .action-btn span {
-  display: none;
-}
 
 /* コンパクトモード (ファビコン + ピン + 削除) */
 .content.split-mode #tabsPanel.mode-compact .tab-item {
@@ -581,9 +568,6 @@ body {
   flex: 1;
 }
 
-.content.split-mode .panel-actions {
-  padding: var(--spacing-sm);
-}
 
 .content.split-mode .tab-item {
   padding: 6px var(--spacing-sm);
@@ -628,14 +612,8 @@ body {
 }
 
 /* ===========================
-   繧｢繧ｯ繧ｷ繝ｧ繝ｳ髢｢騾｣
+   アクション関連
    =========================== */
-.panel-actions {
-  padding: var(--spacing-sm) var(--spacing-md);
-  padding-bottom: var(--spacing-xs);
-  display: flex;
-  justify-content: stretch;
-}
 
 .action-btn {
   flex: 1;
@@ -674,8 +652,8 @@ body {
 .tab-item {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
+  gap: 6px;
+  padding: 6px 8px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -802,22 +780,16 @@ body {
 
 /* 繝溘Η繝ｼ繝医さ繝ｳ繝医Ο繝ｼ繝ｫ */
 .tab-item .mute-control {
-  display: flex;
+  display: none;
   align-items: center;
-  gap: 6px;
-  opacity: 0;
-  pointer-events: none;
-  visibility: hidden;
+  gap: 4px;
   transition: all var(--transition-fast);
-  margin-left: auto;
-  padding-right: 4px;
+  padding-right: 2px;
 }
 
 /* 蜀咲函荳ｭ縺ｾ縺溘�繝溘Η繝ｼ繝井ｸｭ縺ｮ繧ｿ繝悶↓陦ｨ遉ｺ */
 .tab-item.show-mute .mute-control {
-  opacity: 1;
-  pointer-events: auto;
-  visibility: visible;
+  display: flex;
 }
 
 /* 繝溘Η繝ｼ繝医�繧ｿ繝ｳ */
@@ -877,18 +849,10 @@ body {
 .window-separator {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  gap: 8px;
   padding: var(--spacing-md) var(--spacing-md) var(--spacing-xs);
   margin-top: var(--spacing-xs);
-}
-
-.window-separator::before,
-.window-separator::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-  opacity: 0.6;
 }
 
 .window-separator:first-child {
@@ -902,6 +866,43 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
+}
+
+.window-new-tab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--border);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all var(--transition-fast);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.window-new-tab-btn:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.window-new-tab-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ミニマルモード時のウィンドウセパレーター調整 */
+.content.split-mode #tabsPanel.mode-minimal .window-separator {
+  padding: var(--spacing-sm) 4px var(--spacing-xs);
+  gap: 4px;
+}
+
+.content.split-mode #tabsPanel.mode-minimal .window-separator-label {
+  font-size: 10px;
 }
 
 /* ===========================

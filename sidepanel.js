@@ -48,7 +48,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupAddressBar();
   setupBookmarkAction();
   setupContextMenu();
-  setupNewTabAction();
   setupTabListeners(); // タブのイベントリスナーを設定
   updateNavButtonsStatus(); // ナビゲーションボタンの状態を初期更新
   setupResizer(); // リサイザーの初期化
@@ -69,14 +68,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ===========================
 // アクション関連
 // ===========================
-function setupNewTabAction() {
-  const newTabBtn = document.getElementById('newTabBtn');
-  if (newTabBtn) {
-    newTabBtn.addEventListener('click', () => {
-      chrome.tabs.create({});
-    });
-  }
-}
 
 /**
  * 分割表示のセットアップ
@@ -131,8 +122,8 @@ function setupResizer() {
     let ratio = (offsetX / totalWidth) * 100;
 
     // 制約の適用
-    const minTabWidth = 36; // 「新規タブを追加」が改行されない最小
-    const minBookmarkWidth = 36; // ファビコンが見える最小
+    const minTabWidth = 50; // 「新規タブを追加」が改行されない最小
+    const minBookmarkWidth = 50; // ファビコンが見える最小
 
     const minTabRatio = (minTabWidth / totalWidth) * 100;
     const minBookmarkRatio = (minBookmarkWidth / totalWidth) * 100;
@@ -175,29 +166,15 @@ function applySplitRatio() {
     const tabWidth = contentWidth * (ratio / 100);
     const bookmarkWidth = contentWidth * ((100 - ratio) / 100);
 
-    // 新規タブボタンのテキスト制御とモード判定
-    const newTabBtn = document.getElementById('newTabBtn');
     let currentMode = 'large';
-    if (newTabBtn) {
-      const btnText = newTabBtn.querySelector('.btn-text');
-      if (btnText) {
-        if (tabWidth > 165) {
-          btnText.textContent = '新規タブを追加';
-          btnText.style.display = 'inline';
-          currentMode = 'large';
-        } else if (tabWidth > 130) {
-          btnText.textContent = 'タブを追加';
-          btnText.style.display = 'inline';
-          currentMode = 'normal';
-        } else if (tabWidth > 95) {
-          btnText.textContent = '追加';
-          btnText.style.display = 'inline';
-          currentMode = 'compact';
-        } else {
-          btnText.style.display = 'none'; // ＋アイコンのみ
-          currentMode = 'minimal';
-        }
-      }
+    if (tabWidth > 165) {
+      currentMode = 'large';
+    } else if (tabWidth > 130) {
+      currentMode = 'normal';
+    } else if (tabWidth > 95) {
+      currentMode = 'compact';
+    } else {
+      currentMode = 'minimal';
     }
 
     // ウィンドウセパレーターのラベル制御
@@ -220,7 +197,7 @@ function applySplitRatio() {
       // 後方互換性のための favicon-only (必要な場合)
       if (currentMode === 'minimal') dom.tabsPanel.classList.add('favicon-only');
     }
-    
+
     // ブックマークパネルは従来通りの判定を維持（または必要に応じて拡張）
     if (dom.bookmarksPanel) dom.bookmarksPanel.classList.toggle('favicon-only', bookmarkWidth < 80);
   }
@@ -791,14 +768,17 @@ function renderTabs() {
   windowIds.forEach((windowId, index) => {
     const tabs = grouped[windowId];
 
-    // 複数ウィンドウの場合はセパレーターを表示
-    if (windowIds.length > 1) {
-      html += `
-        <div class="window-separator">
-          <span class="window-separator-label" data-index="${index + 1}">ウィンドウ ${index + 1}</span>
-        </div>
-      `;
-    }
+    // 全てのウィンドウでセパレーターを表示（ユーザーの「各ウィンドウに」という要望に応えるため、また一貫性のため）
+    html += `
+      <div class="window-separator">
+        <span class="window-separator-label" data-index="${index + 1}">WINDOW ${index + 1}</span>
+        <button class="window-new-tab-btn" data-window-id="${windowId}" title="このウィンドウに新しいタブを追加">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
+      </div>
+    `;
 
     tabs.forEach((tab) => {
       html += createTabItemHTML(tab);
@@ -811,6 +791,14 @@ function renderTabs() {
   bindFaviconErrorHandlers(dom.tabsList);
 
   // イベントバインド
+  dom.tabsList.querySelectorAll('.window-new-tab-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const windowId = parseInt(btn.dataset.windowId);
+      chrome.tabs.create({ windowId });
+    });
+  });
+
   dom.tabsList.querySelectorAll('.tab-item').forEach((el) => {
     const tabId = parseInt(el.dataset.tabId);
 
