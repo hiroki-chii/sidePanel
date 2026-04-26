@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupTabListeners(); // タブのイベントリスナーを設定
   updateNavButtonsStatus(); // ナビゲーションボタンの状態を初期更新
   setupResizer(); // リサイザーの初期化
-  setupTabDetach(); // タブ切り離しD&Dの初期化
+  setupGlobalDragAndDrop(); // グローバルなD&D（切り離し、背景ドロップ等）の初期化
   loadTabs();
   await loadAppState(); // 保存された状態を読み込む
   switchTab(state.activeTab); // 保存されたタブに切り替え
@@ -896,6 +896,10 @@ function renderTabs() {
     }
   });
 
+
+
+
+
   bindTabDragAndDrop();
 }
 
@@ -920,8 +924,9 @@ function bindTabDragAndDrop() {
     });
 
     item.addEventListener('dragover', (e) => {
+      if (!draggedTabId && !draggedBookmarkId) return;
       e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
+      e.dataTransfer.dropEffect = draggedTabId ? 'move' : 'copy';
 
       const rect = item.getBoundingClientRect();
       const mid = rect.top + rect.height / 2;
@@ -943,10 +948,8 @@ function bindTabDragAndDrop() {
       e.stopPropagation(); // documentレベルのdetachハンドラへの伝播を防止
       item.classList.remove('drag-over-top', 'drag-over-bottom');
 
-      if (!draggedTabId) return;
-      const targetTabId = parseInt(item.dataset.tabId);
-      if (draggedTabId === targetTabId) return;
-
+      if (!draggedTabId && !draggedBookmarkId) return;
+      
       const targetWindowId = parseInt(item.dataset.windowId);
       let targetIndex = parseInt(item.dataset.index);
 
@@ -958,7 +961,21 @@ function bindTabDragAndDrop() {
       }
 
       try {
-        await chrome.tabs.move(draggedTabId, { windowId: targetWindowId, index: targetIndex });
+        if (draggedTabId) {
+          const targetTabId = parseInt(item.dataset.tabId);
+          if (draggedTabId === targetTabId) return;
+          await chrome.tabs.move(draggedTabId, { windowId: targetWindowId, index: targetIndex });
+        } else if (draggedBookmarkId) {
+          const [bookmark] = await chrome.bookmarks.get(draggedBookmarkId);
+          if (bookmark && bookmark.url) {
+            await chrome.tabs.create({
+              windowId: targetWindowId,
+              index: targetIndex,
+              url: bookmark.url,
+              active: false
+            });
+          }
+        }
       } catch (err) {
         console.error('D&D Error:', err);
       }
@@ -971,22 +988,62 @@ function bindTabDragAndDrop() {
  * documentレベルでリスンし、タブドラッグ中に.tab-item以外に
  * ドロップしたら新規ウィンドウへ切り離す
  */
-function setupTabDetach() {
-  document.addEventListener('dragover', (e) => {
-    // タブをドラッグ中かつ、tab-item上でなければドロップ許可
-    if (draggedTabId && !e.target.closest('.tab-item')) {
+/**
+ * グローバルなドラッグ＆ドロップのセットアップ
+ * タブの切り離し（新規ウィンドウ化）や、背景へのブックマークドロップを管理
+ */
+function setupGlobalDragAndDrop() {
+  const handleDragOver = (e) => {
+    const isOverTabItem = e.target.closest('.tab-item');
+    const isOverTabsPanel = e.target.closest('#tabsPanel');
+
+    // ブックマークをドラッグ中：タブパネルの上（アイテム以外）ならドロップ許可
+    if (draggedBookmarkId && isOverTabsPanel && !isOverTabItem) {
       e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
+      e.dataTransfer.dropEffect = 'copy';
+      return;
     }
-  });
+
+    // タブをドラッグ中
+    if (draggedTabId) {
+      if (!isOverTabsPanel) {
+        // パネル外：切り離し許可
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      } else if (!isOverTabItem) {
+        // パネル内の背景：ドロップを許可（末尾追加等）
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      }
+    }
+  };
+
+  document.addEventListener('dragover', handleDragOver);
+  document.addEventListener('dragenter', handleDragOver);
 
   document.addEventListener('drop', async (e) => {
-    if (draggedTabId && !e.target.closest('.tab-item')) {
+    const isOverTabItem = e.target.closest('.tab-item');
+    const isOverTabsPanel = e.target.closest('#tabsPanel');
+    
+    // タブの切り離し（新規ウィンドウ化）
+    if (draggedTabId && !isOverTabsPanel) {
       e.preventDefault();
       try {
         await chrome.windows.create({ tabId: draggedTabId });
       } catch (err) {
         console.error('新規ウィンドウ切り離しエラー:', err);
+      }
+    } 
+    // ブックマークをタブパネルの背景にドロップ（現在のウィンドウの末尾に追加）
+    else if (draggedBookmarkId && isOverTabsPanel && !isOverTabItem) {
+      e.preventDefault();
+      try {
+        const [bookmark] = await chrome.bookmarks.get(draggedBookmarkId);
+        if (bookmark && bookmark.url) {
+          await chrome.tabs.create({ url: bookmark.url, active: false });
+        }
+      } catch (err) {
+        console.error('ブックマーク背景ドロップエラー:', err);
       }
     }
   });
@@ -1212,9 +1269,22 @@ function bindBookmarkEvents() {
     const id = item.dataset.bookmarkId;
     const url = item.dataset.url;
 
-    item.addEventListener('click', () => {
+    item.addEventListener('click', async () => {
       if (url) {
-        chrome.tabs.create({ url });
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab) {
+          chrome.tabs.update(tab.id, { url });
+        } else {
+          chrome.tabs.create({ url });
+        }
+      }
+    });
+
+    // マウスホイール押し込み（中央クリック）の処理
+    item.addEventListener('mousedown', (e) => {
+      if (e.button === 1 && url) { // 中央クリック
+        e.preventDefault(); // オートスクロールを防止
+        chrome.tabs.create({ url, active: false }); // 標準的な挙動に合わせて背景タブで開く
       }
     });
 
@@ -1246,7 +1316,7 @@ function bindBookmarkDragAndDrop() {
       if (!id) return;
 
       draggedBookmarkId = id;
-      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.effectAllowed = 'copyMove';
       e.dataTransfer.setData('text/plain', id);
 
       // ドラッグ中の表示
@@ -1497,16 +1567,9 @@ function showBookmarkContextMenu(e, bookmarkId, url) {
 
   if (url) {
     items.push({
-      label: '現在のタブで開く',
-      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8.1 8.1 0 0 0-15.5-2m-.5-4v4h4a8.1 8.1 0 0 1 15.5 2m.5 4v-4h-4"/></svg>',
-      action: async () => {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tab) {
-          await chrome.tabs.update(tab.id, { url });
-        } else {
-          await chrome.tabs.create({ url });
-        }
-      },
+      label: '新しいタブで開く',
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
+      action: () => chrome.tabs.create({ url }),
     });
     items.push({
       label: 'URLをコピー',
