@@ -114,47 +114,12 @@
     <!-- ツール一覧 -->
     <section id="toolsPanel" class="panel">
       <!-- ツールの各アイテムを同レベルに指定して間隔を統一 -->
-      <div class="setting-item">
-        <div class="setting-info">
-          <div class="setting-title">X (Twitter) 右サイドバー非表示</div>
-          <div class="setting-desc">おすすめトレンド等を隠します</div>
-        </div>
-        <label class="toggle-switch">
-          <input type="checkbox" id="toggleXSidebar">
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-
-      <div class="setting-item">
-        <div class="setting-info">
-          <div class="setting-title">YouTube Shorts 自動送り</div>
-          <div class="setting-desc">ショート動画終了時に自動で次へ進みます</div>
-        </div>
-        <label class="toggle-switch">
-          <input type="checkbox" id="toggleYtShortsAutoScroll">
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-
-      <div class="setting-item">
-        <div class="setting-info">
-          <div class="setting-title">AIチャット誤送信防止</div>
-          <div class="setting-desc">Enterで改行、Ctrl+Enterで送信に変更します</div>
-        </div>
-        <label class="toggle-switch">
-          <input type="checkbox" id="toggleAiEnterGuard">
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-
-
-
       <!-- ページテキスト取得ツール -->
       <div class="settings-group collapsible-group">
         <div class="setting-item collapsible-header" id="summaryToolHeader">
           <div class="setting-info">
             <div class="setting-title">ページテキスト取得</div>
-            <div class="setting-desc">表示中のページ内容をMarkdown形式で取得・コピーします</div>
+            <div class="setting-desc">表示中のページ内容をMarkdown形式で取得します。</div>
           </div>
           <div class="chevron-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -165,7 +130,7 @@
         <div class="collapsible-content" id="summaryToolContent">
           <div class="setting-item"
             style="flex-direction: column; align-items: stretch; gap: 12px; padding: 12px; border-top: none;">
-            
+
             <button id="copyMdBtn" class="action-btn" title="ページ内容をMarkdown形式で取得"
               style="background-color: var(--accent); color: white; border-style: solid; border-color: var(--accent);">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -220,6 +185,40 @@
           </div>
         </div>
       </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-title">X (Twitter) 右サイドバー非表示</div>
+          <div class="setting-desc">おすすめトレンド等を隠します</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="toggleXSidebar">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-title">YouTube Shorts 自動送り</div>
+          <div class="setting-desc">ショート動画終了時に自動で次へ進みます</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="toggleYtShortsAutoScroll">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <div class="setting-title">AIチャット誤送信防止</div>
+          <div class="setting-desc">Enterで改行、Ctrl+Enterで送信に変更します</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="toggleAiEnterGuard">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
     </section>
   </main>
 
