@@ -51,6 +51,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupTabListeners(); // タブのイベントリスナーを設定
   updateNavButtonsStatus(); // ナビゲーションボタンの状態を初期更新
   setupResizer(); // リサイザーの初期化
+  setupTabDetach(); // タブ切り離しD&Dの初期化
   loadTabs();
   await loadAppState(); // 保存された状態を読み込む
   switchTab(state.activeTab); // 保存されたタブに切り替え
@@ -896,6 +897,7 @@ function bindTabDragAndDrop() {
 
     item.addEventListener('drop', async (e) => {
       e.preventDefault();
+      e.stopPropagation(); // documentレベルのdetachハンドラへの伝播を防止
       item.classList.remove('drag-over-top', 'drag-over-bottom');
 
       if (!draggedTabId) return;
@@ -918,6 +920,32 @@ function bindTabDragAndDrop() {
         console.error('D&D Error:', err);
       }
     });
+  });
+}
+
+/**
+ * タブを背景にドロップして新規ウィンドウに切り離す機能
+ * documentレベルでリスンし、タブドラッグ中に.tab-item以外に
+ * ドロップしたら新規ウィンドウへ切り離す
+ */
+function setupTabDetach() {
+  document.addEventListener('dragover', (e) => {
+    // タブをドラッグ中かつ、tab-item上でなければドロップ許可
+    if (draggedTabId && !e.target.closest('.tab-item')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    }
+  });
+
+  document.addEventListener('drop', async (e) => {
+    if (draggedTabId && !e.target.closest('.tab-item')) {
+      e.preventDefault();
+      try {
+        await chrome.windows.create({ tabId: draggedTabId });
+      } catch (err) {
+        console.error('新規ウィンドウ切り離しエラー:', err);
+      }
+    }
   });
 }
 
