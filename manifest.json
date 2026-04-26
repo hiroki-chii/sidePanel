@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Tab & Bookmark Panel",
-  "version": "1.2.0",
-  "description": "サイドパネルでタブとブックマークを効率的に管理。AIによるページ要約機能も搭載。",
+  "version": "1.3.0",
+  "description": "サイドパネルでタブとブックマークを効率的に管理。",
   "permissions": [
     "sidePanel",
     "tabs",
