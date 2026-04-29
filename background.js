@@ -1,7 +1,7 @@
 // サイドパネルをツールバーのアイコンクリックで開く
 chrome.sidePanel
   .setPanelBehavior({ openPanelOnActionClick: true })
-  .catch((error) => console.error(error));
+  .catch((error) => {});
 
 // サイドパネルの開閉状態を検知してストレージに保存
 // サイドパネルが開くとruntime.connectで接続が来る

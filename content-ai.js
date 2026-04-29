@@ -338,7 +338,7 @@
     if (window.location.hostname !== "gemini.google.com") return;
 
     // 読み込み確認ログ（早期に出力）
-    console.log("[GeminiCanvasFullscreen] スクリプトが開始されました。URL:", window.location.href);
+    // 読み込み確認ログ（早期に出力）
 
     // スタイルを注入
     const CSS_ID = "gemini-canvas-fullscreen-styles";
@@ -402,7 +402,7 @@
             // ツールバー、ヘッダー、または特定のボタン群の中にあるか確認
             const isInsideHeader = el.closest('[role="toolbar"], div[class*="toolbar"], div[class*="header"], div[class*="Artifact"]');
             if (isInsideHeader) {
-              console.log("[GeminiCanvasFullscreen] 有効なアンカー要素を発見:", text);
+              // 有効なアンカー要素を発見
               return el;
             }
           }
@@ -423,7 +423,7 @@
 
       if (!header || header.querySelector(".g-full-btn")) return;
 
-      console.log("[GeminiCanvasFullscreen] ボタンを注入します。");
+      // ボタンを注入します。
 
       const btn = document.createElement("button");
       btn.className = "g-full-btn";
@@ -459,7 +459,7 @@
         }
 
         if (container) {
-          console.log("[GeminiCanvasFullscreen] コンテナを全画面化:", container);
+          // コンテナを全画面化
           container.classList.toggle("g-canvas-expanded", isFull);
           // 兄弟要素（チャット等）を隠す
           let parent = container.parentElement;

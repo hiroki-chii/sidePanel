@@ -1,5 +1,10 @@
 # 作業ログ
 
+## 2026-04-29 10:13
+### 不要なログ出力の削除と整理
+- アプリ内の動作確認用 `console.log` や不要な `console.error` を整理しました。
+- `content-ai.js`: GeminiCanvasFullscreen 関連の開発用ログ (`console.log`) を削除し、コメントに変更。
+- `background.js`: `catch` 句の `console.error` を空関数に変更してコンソール出力を抑制。
 ## 2026-04-26 17:40
 - 拡張機能の説明文（ストア掲載用）を現在の実装状況（AI音声入力削除、レスポンシブUI、Gemini全画面等）に合わせて修正
 
