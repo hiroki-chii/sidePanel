@@ -382,6 +382,31 @@
         }
         .g-full-btn svg { width: 20px; height: 20px; }
         body.g-canvas-full .g-full-btn { color: #1a73e8; opacity: 1; background: rgba(26, 115, 232, 0.1); }
+        
+        /* テーマ切り替えボタンのスタイル */
+        .g-theme-btn {
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          padding: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          color: currentColor;
+          opacity: 0.7;
+          transition: all 0.2s;
+          margin: 0 4px;
+        }
+        .g-theme-btn:hover {
+          opacity: 1;
+          background-color: rgba(128, 128, 128, 0.15);
+        }
+        .g-theme-btn svg { width: 20px; height: 20px; }
+
+        /* 手動テーマ適用時の背景色 */
+        body.g-canvas-full.dark-theme .g-canvas-expanded { background: #1e1e1e !important; }
+        body.g-canvas-full.light-theme .g-canvas-expanded { background: #ffffff !important; }
       `;
       (document.head || document.documentElement).appendChild(style);
     };
@@ -473,7 +498,52 @@
         }
       };
 
-      header.insertBefore(btn, header.firstChild);
+
+      // テーマ切り替えボタンを作成
+      const themeBtn = document.createElement("button");
+      themeBtn.className = "g-theme-btn";
+      themeBtn.id = "g-theme-toggle-btn";
+      themeBtn.title = "テーマ切り替え (拡張機能「Tab & Bookmark Panel」により表示されています。)";
+      
+      const updateThemeUI = (theme) => {
+        document.body.classList.remove("light-theme", "dark-theme");
+        if (theme === "light") {
+          document.body.classList.add("light-theme");
+          themeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
+        } else if (theme === "dark") {
+          document.body.classList.add("dark-theme");
+          themeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
+        } else {
+          themeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>`;
+        }
+      };
+
+      // 初期状態の読み込み
+      chrome.storage.local.get({ theme: 'system' }, (result) => {
+        updateThemeUI(result.theme);
+      });
+
+      themeBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        chrome.storage.local.get({ theme: 'system' }, (result) => {
+          let nextTheme = "light";
+          if (result.theme === "light") nextTheme = "dark";
+          else if (result.theme === "dark") nextTheme = "system";
+          chrome.storage.local.set({ theme: nextTheme });
+          updateThemeUI(nextTheme);
+        });
+      };
+
+      // 外部（サイドパネル等）からの変更を監視
+      chrome.storage.onChanged.addListener((changes) => {
+        if (changes.theme) {
+          updateThemeUI(changes.theme.newValue);
+        }
+      });
+
+      header.insertBefore(themeBtn, header.firstChild);
+      header.insertBefore(btn, themeBtn.nextSibling); // テーマボタンの右隣に全画面ボタンを配置
     }
 
     // 監視設定 (document_start に対応するため documentElement から開始)

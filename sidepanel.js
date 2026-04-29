@@ -15,6 +15,7 @@ const state = {
   openFolderIds: new Set(), // 開いているフォルダのIDを保持
   isSplitView: true, // 分割表示モード (固定)
   splitRatio: 50, // 分割比率 (0-100)
+  theme: 'system', // 'light' | 'dark' | 'system'
 };
 
 // ===========================
@@ -66,6 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 初期化時に全画面状態をチェック
   updateFullscreenHighlight();
+  setupTheme(); // テーマ切り替えの初期化
 });
 
 // ===========================
@@ -334,6 +336,72 @@ async function updateFullscreenHighlight() {
   if (!btn) return;
   const win = await chrome.windows.getCurrent();
   btn.classList.toggle('active', win.state === 'fullscreen');
+}
+
+/**
+ * テーマ切り替えのセットアップ
+ */
+function setupTheme() {
+  const btn = document.getElementById('navTheme');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    // light -> dark -> system の順で切り替え
+    if (state.theme === 'light') {
+      state.theme = 'dark';
+    } else if (state.theme === 'dark') {
+      state.theme = 'system';
+    } else {
+      state.theme = 'light';
+    }
+    applyTheme();
+    saveAppState();
+  });
+
+  // 外部（Gemini上のボタン等）からの変更を監視
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes.theme) {
+      state.theme = changes.theme.newValue;
+      applyTheme();
+    }
+  });
+
+  // 初期適用
+  applyTheme();
+}
+
+/**
+ * テーマの適用
+ */
+function applyTheme() {
+  const html = document.documentElement;
+  const icon = document.getElementById('navThemeIcon');
+  const btn = document.getElementById('navTheme');
+  if (!html || !icon || !btn) return;
+
+  // クラスのクリーンアップ
+  html.classList.remove('light-theme', 'dark-theme');
+
+  // アイコンとクラスの切り替え
+  if (state.theme === 'light') {
+    html.classList.add('light-theme');
+    btn.title = 'テーマ: ライト (クリックでダークに切り替え)';
+    icon.innerHTML = `
+      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    `;
+  } else if (state.theme === 'dark') {
+    html.classList.add('dark-theme');
+    btn.title = 'テーマ: ダーク (クリックでシステムに切り替え)';
+    icon.innerHTML = `
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    `;
+  } else {
+    // system
+    btn.title = 'テーマ: システム (クリックでライトに切り替え)';
+    icon.innerHTML = `
+      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" />
+    `;
+  }
 }
 
 // ===========================
@@ -1426,7 +1494,8 @@ async function saveAppState() {
       openFolderIds: Array.from(state.openFolderIds),
       activeTab: state.activeTab,
       isSplitView: state.isSplitView,
-      splitRatio: state.splitRatio
+      splitRatio: state.splitRatio,
+      theme: state.theme
     });
   } catch (error) {
     console.error('状態の保存に失敗:', error);
@@ -1435,7 +1504,7 @@ async function saveAppState() {
 
 async function loadAppState() {
   try {
-    const result = await chrome.storage.local.get(['openFolderIds', 'activeTab', 'isSplitView']);
+    const result = await chrome.storage.local.get(['openFolderIds', 'activeTab', 'isSplitView', 'splitRatio', 'theme']);
     if (result.openFolderIds) {
       state.openFolderIds = new Set(result.openFolderIds);
     }
@@ -1447,6 +1516,10 @@ async function loadAppState() {
     }
     if (result.splitRatio !== undefined) {
       state.splitRatio = result.splitRatio;
+    }
+    if (result.theme) {
+      state.theme = result.theme;
+      applyTheme(); // 保存されたテーマを適用
     }
 
     // 初期ロード時の状態適用
