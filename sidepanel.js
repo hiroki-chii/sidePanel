@@ -1829,12 +1829,19 @@ function loadToolsSettings() {
   const toggleXSidebar = document.getElementById('toggleXSidebar');
   const toggleYtShortsAutoScroll = document.getElementById('toggleYtShortsAutoScroll');
   const toggleAiEnterGuard = document.getElementById('toggleAiEnterGuard');
+  const miniPlayerSize = document.getElementById('miniPlayerSize');
 
-  // 初期値の読み込み（aiEnterGuardはデフォルトON）
-  chrome.storage.local.get({ hideXSidebar: false, autoScrollYtShorts: false, aiEnterGuard: true }, (result) => {
+  // 初期値の読み込み
+  chrome.storage.local.get({
+    hideXSidebar: false,
+    autoScrollYtShorts: false,
+    aiEnterGuard: true,
+    miniPlayerSize: 'small'
+  }, (result) => {
     if (toggleXSidebar) toggleXSidebar.checked = result.hideXSidebar;
     if (toggleYtShortsAutoScroll) toggleYtShortsAutoScroll.checked = result.autoScrollYtShorts;
     if (toggleAiEnterGuard) toggleAiEnterGuard.checked = result.aiEnterGuard;
+    if (miniPlayerSize) miniPlayerSize.value = result.miniPlayerSize;
   });
 
   // 変更の保存
@@ -1847,7 +1854,11 @@ function loadToolsSettings() {
   if (toggleAiEnterGuard) {
     toggleAiEnterGuard.addEventListener('change', (e) => chrome.storage.local.set({ aiEnterGuard: e.target.checked }));
   }
+  if (miniPlayerSize) {
+    miniPlayerSize.addEventListener('change', (e) => chrome.storage.local.set({ miniPlayerSize: e.target.value }));
+  }
 }
+
 
 
 /**
@@ -1862,8 +1873,9 @@ function setupFeatures() {
       "・タブ上から音声ミュート：タブの右にあるスピーカーアイコンをクリックすると、そのタブの音声をミュート/解除できます。",
       "・ブックマーク：ブラウザのブックマークをツリー形式で表示・管理できます。",
       "・AIチャットの誤送信防止：AIチャットの誤送信を防ぎます。Ctrl+Enterを押すまでは送信されません。",
+      "・YouTubeミニプレイヤー：動画をスクロールアウトした際に、自動で画面右下に固定表示（ミニプレイヤー化）します。サイズは設定から5段階で変更可能です。",
       "・Gemini Canvas拡張：Gemini Canvasのプレビューを全画面表示可能です。",
-      "・ブラウジング補助：Xのサイドバー非表示やYouTubeの自動送りなどが可能です。"
+      "・ブラウジング補助：Xのサイドバー非表示やYouTube Shortsの自動送りなどが可能です。"
     ];
     showAlert(features.join("\n\n"), "利用可能な機能一覧");
   });
