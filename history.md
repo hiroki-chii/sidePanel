@@ -168,3 +168,22 @@
   - 音声入力に関連する変数（`mediaRecorder`, `audioChunks`等）を削除。
   - `setupVoiceTool`, `blobToBase64`, `sendToGemini` (音声版) を削除。
   - `setupOutputTabs` を要約ツール専用に修正し、DOM参照エラーを解決。
+
+## 2026-05-10 20:18
+- YouTubeスクロール連動ミニプレイヤー機能の実装計画を作成。
+- IntersectionObserverを利用した高パフォーマンスな検知と、CSS固定方式（Approach B）の採用を決定。
+- SPA対応および遅延読み込み対応のロジックを検討。
+- `content-youtube.js` に以下を実装：
+  - ミニプレイヤー用CSS（position: fixed, 400x225px, 右下固定, 角丸・影付き）
+  - IntersectionObserver（threshold: 0.5）でプレイヤーコンテナの可視性を監視
+  - `yt-navigate-finish` イベントでSPA遷移を検知し、`/watch` 時のみ監視開始
+  - ポーリング（500ms×30回）でDOM遅延読み込みに対応
+  - プレースホルダー挿入によるレイアウト崩れ防止
+  - 閉じるボタン（✕）でユーザー手動解除対応
+  - フレームイン時の自動復帰・dismissedフラグリセット
+  - `chrome.storage` 連携で `miniPlayerEnabled` のON/OFF切替に対応
+
+## 2026-05-10 20:31
+- YouTubeの動画再生中におけるおすすめ動画（サイドバー）の表示方法を初期状態に戻しました。
+- サイドパネル表示中に強制されていた縦並びレイアウトのスタイル定義と、関連するストレージ連携ロジックを削除しました。
+- これにより、サイドパネル開閉に関わらずYouTube標準のレコメンド表示が維持されます。
