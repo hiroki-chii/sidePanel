@@ -8,30 +8,22 @@
   const styleWidth = document.createElement('style');
   styleWidth.id = 'x-optimizer-width';
   styleWidth.textContent = `
-    /* メインコンテナの幅制限を解除 */
-    html[data-x-optim="true"] main[role="main"],
-    html[data-x-optim="true"] main[role="main"] > div {
-      width: 100% !important;
-      max-width: 100% !important;
-    }
-    
-    /* タイムラインの最大幅を広げ、中央寄せにする */
+    /* メインコンテナの最大幅制限を緩和 */
     html[data-x-optim="true"] [data-testid="primaryColumn"] {
       width: 100% !important;
       max-width: 1000px !important; 
       margin: 0 auto !important;
     }
     
-    /* 内部のタイムラインラッパー制限も広げる */
+    /* タイムライン内部のラッパー制限を緩和 */
     html[data-x-optim="true"] [data-testid="primaryColumn"] > div > div {
-      max-width: 975px !important;
-      margin: 0 auto !important;
+      max-width: none !important;
     }
 
-    /* 親要素の flexレイアウトなどによる不自然な制約を緩和 */
-    html[data-x-optim="true"] .r-1ye8kvj, 
-    html[data-x-optim="true"] .r-13qz1uu {
-      min-width: 0 !important;
+    /* 親要素のコンテナ制限を解除するための、より安全なアプローチ */
+    html[data-x-optim="true"] main[role="main"] > div > div {
+      max-width: 100% !important;
+      width: 100% !important;
     }
   `;
 
