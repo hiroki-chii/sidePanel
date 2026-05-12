@@ -233,18 +233,23 @@
         </label>
       </div>
 
-      <div class="setting-item" id="miniPlayerSizeRow">
+      <div class="setting-item">
         <div class="setting-info">
-          <div class="setting-title">ミニプレイヤー サイズ</div>
-          <div class="setting-desc">フローティング表示のサイズを選択</div>
+          <div class="setting-title">YouTube ミニプレイヤー</div>
+          <div class="setting-desc">スクロール時に表示します</div>
         </div>
-        <select id="miniPlayerSize" class="setting-select">
-          <option value="xlarge">特大</option>
-          <option value="large">大</option>
-          <option value="medium">中</option>
-          <option value="small" selected>小</option>
-          <option value="hidden">非表示</option>
-        </select>
+        <div class="setting-controls">
+          <select id="miniPlayerSize" class="setting-select" style="min-width: 60px;">
+            <option value="xlarge">特大</option>
+            <option value="large">大</option>
+            <option value="medium">中</option>
+            <option value="small" selected>小</option>
+          </select>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggleMiniPlayer">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
       </div>
 
       <div class="setting-item">

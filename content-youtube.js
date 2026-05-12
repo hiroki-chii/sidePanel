@@ -188,7 +188,8 @@
   // === YouTube スクロール連動ミニプレイヤー ===
   let miniPlayerEnabled = false;
   let miniPlayerActive = false;
-  let miniPlayerSize = 'medium'; // hidden | small | medium | large | xlarge
+  let miniPlayerDismissed = false; // ✕ボタンで一時的に非表示にしたフラグ
+  let miniPlayerSize = 'medium'; // small | medium | large | xlarge
   let intersectionObserver = null;
   let playerPollTimer = null;
   let sentinelElement = null; // Observer監視用のセンチネル要素
@@ -198,9 +199,7 @@
   let videoElement = null; // 移動対象のvideo要素
 
   // サイズ定義マップ（width, height）
-  // hidden=非表示
   const MINI_PLAYER_SIZES = {
-    hidden: null,
     small: { w: 400, h: 225 },
     medium: { w: 520, h: 293 },
     large: { w: 640, h: 360 },
@@ -301,6 +300,19 @@
         left: 8px;
         font-size: 16px;
       }
+      .yt-ext-fp-play-pause {
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 48px;
+        height: 48px;
+        font-size: 24px;
+        background: rgba(0, 0, 0, 0.5);
+      }
+      .yt-ext-fp-play-pause svg {
+        width: 30px;
+        height: 30px;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -341,6 +353,7 @@
       // ページ遷移時にミニプレイヤーを必ずリセット
       deactivateMiniPlayer();
       teardownMiniPlayer();
+      miniPlayerDismissed = false; // ページ遷移でフラグリセット
 
       if (miniPlayerEnabled) {
         setupMiniPlayerOnNavigation();
@@ -410,14 +423,15 @@
 
         for (const entry of entries) {
           if (entry.isIntersecting) {
-            // プレイヤー位置が画面内に戻った → ミニプレイヤー解除
+            // プレイヤー位置が画面内に戻った → ミニプレイヤー解除＆フラグリセット
             deactivateMiniPlayer();
+            miniPlayerDismissed = false;
           } else {
-            // プレイヤー位置が画面外 → ミニプレイヤー化（再生中のみ）
-            // 「非表示」設定の場合はミニプレイヤー化しない
-            if (miniPlayerSize === 'hidden') break;
+            // プレイヤー位置が画面外 → ミニプレイヤー化
+            // ユーザーが✕で閉じた場合はスキップ
+            if (miniPlayerDismissed) break;
             const video = document.querySelector('#movie_player video');
-            if (video && !video.paused && !video.ended) {
+            if (video) {
               activateMiniPlayer();
             }
           }
@@ -453,8 +467,8 @@
     closeBtn.title = 'ミニプレイヤーを閉じる';
     closeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
+      miniPlayerDismissed = true; // プレイヤー位置に戻るまで再表示しない
       deactivateMiniPlayer();
-      if (videoElement) videoElement.pause();
     });
 
     // 元位置に戻るボタン
@@ -474,10 +488,39 @@
       }
     });
 
+    // 再生/停止ボタン
+    const playPauseBtn = document.createElement('button');
+    playPauseBtn.className = 'yt-ext-fp-btn yt-ext-fp-play-pause';
+    playPauseBtn.title = '再生/停止';
+
+    const updatePlayPauseIcon = () => {
+      if (video.paused) {
+        playPauseBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+      } else {
+        playPauseBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+      }
+    };
+
+    updatePlayPauseIcon();
+
+    playPauseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (video.paused) {
+        video.play();
+      } else {
+        video.pause();
+      }
+    });
+
+    // ビデオの状態変化を監視
+    video.addEventListener('play', updatePlayPauseIcon);
+    video.addEventListener('pause', updatePlayPauseIcon);
+
     // video要素をフローティングコンテナに移動
     floatingContainer.appendChild(video);
     floatingContainer.appendChild(closeBtn);
     floatingContainer.appendChild(backBtn);
+    floatingContainer.appendChild(playPauseBtn);
     document.body.appendChild(floatingContainer);
 
     // サイズを適用
@@ -522,12 +565,6 @@
   // フローティングコンテナにサイズを適用（リアルタイム変更対応）
   function applyMiniPlayerSize() {
     if (!floatingContainer) return;
-
-    if (miniPlayerSize === 'hidden') {
-      // 非表示の場合はミニプレイヤーを解除
-      deactivateMiniPlayer();
-      return;
-    }
 
     const size = MINI_PLAYER_SIZES[miniPlayerSize] || MINI_PLAYER_SIZES.small;
     if (!size) return;

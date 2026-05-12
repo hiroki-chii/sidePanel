@@ -1,5 +1,36 @@
 # 作業ログ
 
+## 2026-05-12 17:52
+### YouTube ミニプレイヤーの表示条件修正
+- **問題1**: ミニプレイヤーがメインプレイヤー再生中しか表示されなかった
+  - **原因**: IntersectionObserverコールバック内で `!video.paused && !video.ended` チェックがあり、一時停止中はミニプレイヤー化がスキップされていた
+  - **修正**: 再生状態チェックを撤廃し、動画要素が存在すればミニプレイヤー化するように変更
+- **問題2**: ✕ボタンで非表示にすると、メインプレイヤーを表示しないと再表示できなかった
+  - **原因**: ✕ボタンが `video.pause()` を呼んでいたため、一時停止状態 → 再スクロールしても再生中チェックで弾かれていた
+  - **修正**: `miniPlayerDismissed` フラグを導入。✕ボタンはフラグを立てるだけ（pauseしない）。プレイヤー位置に戻る or ページ遷移でフラグリセット → 再度スクロールで再表示可能に
+
+## 2026-05-12 17:59
+### ミニプレイヤーのON/OFFトグルスイッチ追加
+- サイズ選択の「非表示」オプションを廃止し、独立したON/OFFトグルスイッチを新設。
+- `sidepanel.html`: トグルスイッチ（`toggleMiniPlayer`）を追加。サイズセレクトから`hidden`オプションを削除。
+- `sidepanel.js`: `loadToolsSettings`に`miniPlayerEnabled`設定を追加。トグルOFF時はサイズ行を非表示にする連動ロジック追加。
+- `content-youtube.js`: `MINI_PLAYER_SIZES`から`hidden`エントリを削除。IntersectionObserverと`applyMiniPlayerSize`から`hidden`チェックを除去。
+
+## 2026-05-12 20:27
+### YouTube ミニプレイヤーに再生/停止ボタンを追加
+- ミニプレイヤーの中央に、ホバー時のみ表示される再生/停止トグルボタンを追加しました。
+- `content-youtube.js`:
+  - `injectMiniPlayerStyles`: ボタンのスタイル（中央配置、半透明背景、SVGアイコン等）を追加。
+  - `activateMiniPlayer`: ビデオの再生状態を監視し、動的にアイコンが変化するトグルボタンの実装。
+  - ビデオ要素の `play` / `pause` イベントに連動してアイコンを自動更新するロジックを追加。
+
+## 2026-05-12 18:12
+- トグルスイッチとサイズ選択セレクトを1つの`setting-item`にまとめ、右側に横並び配置。
+- `sidepanel.html`: 2つの`setting-item`を1つに統合。`setting-controls`コンテナでセレクト+トグルを横並び。
+- `sidepanel.css`: `.setting-controls`（flexbox横並び）と`.setting-select:disabled`（薄くグレーアウト）スタイルを追加。
+- `sidepanel.js`: `miniPlayerSizeRow`の表示/非表示ではなく、セレクトの`disabled`属性でOFF時に操作不可にする方式に変更。
+
+
 ## 2026-05-12 10:40
 ### ページテキスト取得機能にHTML形式を追加
 - 従来のMarkdown形式に加え、HTML形式でページ内容を取得・コピーできる機能を追加しました。

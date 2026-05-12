@@ -1238,8 +1238,11 @@ function loadToolsSettings() {
     { id: 'toggleXSidebar', key: 'hideXSidebar', default: false },
     { id: 'toggleYtShortsAutoScroll', key: 'autoScrollYtShorts', default: false },
     { id: 'toggleAiEnterGuard', key: 'aiEnterGuard', default: true },
+    { id: 'toggleMiniPlayer', key: 'miniPlayerEnabled', default: true },
     { id: 'miniPlayerSize', key: 'miniPlayerSize', default: 'small' }
   ];
+
+  const sizeSelect = document.getElementById('miniPlayerSize');
 
   chrome.storage.local.get(configs.reduce((acc, c) => ({ ...acc, [c.key]: c.default }), {}), (res) => {
     configs.forEach(c => {
@@ -1249,6 +1252,16 @@ function loadToolsSettings() {
       else el.value = res[c.key];
       el.onchange = (e) => chrome.storage.local.set({ [c.key]: el.type === 'checkbox' ? e.target.checked : e.target.value });
     });
+
+    // トグルOFF時はサイズセレクトを無効化
+    if (sizeSelect) sizeSelect.disabled = !res.miniPlayerEnabled;
+
+    const toggle = document.getElementById('toggleMiniPlayer');
+    if (toggle && sizeSelect) {
+      toggle.addEventListener('change', () => {
+        sizeSelect.disabled = !toggle.checked;
+      });
+    }
   });
 }
 

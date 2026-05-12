@@ -1848,3 +1848,17 @@ input:checked+.toggle-slider:before {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-glow);
 }
+
+.setting-select:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* 複数コントロールを横並びにするコンテナ */
+.setting-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
