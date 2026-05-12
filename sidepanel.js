@@ -1875,7 +1875,8 @@ function setupFeatures() {
       "・AIチャットの誤送信防止：AIチャットの誤送信を防ぎます。Ctrl+Enterを押すまでは送信されません。",
       "・YouTubeミニプレイヤー：動画をスクロールアウトした際に、自動で画面右下に固定表示（ミニプレイヤー化）します。サイズは設定から5段階で変更可能です。",
       "・Gemini Canvas拡張：Gemini Canvasのプレビューを全画面表示可能です。",
-      "・ブラウジング補助：Xのサイドバー非表示やYouTube Shortsの自動送りなどが可能です。"
+      "・ブラウジング補助：Xのサイドバー非表示やYouTube Shortsの自動送りなどが可能です。",
+      "・ページテキスト取得：表示中のページ内容をMarkdownまたはHTML形式で取得・コピーできます。"
     ];
     showAlert(features.join("\n\n"), "利用可能な機能一覧");
   });
@@ -2046,6 +2047,54 @@ function setupSummaryTool() {
       }
     });
   }
+
+  // HTML形式で取得
+  const copyHtmlBtn = document.getElementById('copyHtmlBtn');
+  if (copyHtmlBtn) {
+    copyHtmlBtn.addEventListener('click', async () => {
+      // サイト別の確認・制限チェック
+      if (!await checkSiteAndConfirm(resultArea, statusDisplay)) {
+        return;
+      }
+
+      statusDisplay.textContent = 'ページ内容を取得中...';
+      statusDisplay.style.display = 'block';
+      statusDisplay.style.color = 'var(--text-muted)';
+
+      try {
+        const data = await getActivePageData();
+        if (!data || !data.html) {
+          throw new Error('ページのHTML内容を取得できませんでした。');
+        }
+
+        // HTML形式のテキストを作成 (タイトルとURLをコメントとして含める)
+        const htmlText = `<!-- Title: ${data.title} -->\n<!-- URL: ${data.url} -->\n\n${data.html}`;
+
+        // テキストエリアに表示
+        resultArea.value = htmlText;
+        updateMarkdownPreview();
+
+        // クリップボードにもコピー
+        await navigator.clipboard.writeText(htmlText);
+
+        showToast('HTML形式で取得・コピーしました');
+        statusDisplay.textContent = '取得完了';
+        statusDisplay.style.color = 'var(--text-primary)';
+        setTimeout(() => {
+          if (statusDisplay.textContent === '取得完了') {
+            statusDisplay.style.display = 'none';
+          }
+        }, 3000);
+      } catch (e) {
+        console.error('HTML Export Error:', e);
+        const friendlyMsg = getFriendlyErrorMessage(e);
+        resultArea.value = friendlyMsg;
+        showToast('内容を取得できませんでした');
+        statusDisplay.textContent = 'エラーが発生しました';
+        statusDisplay.style.color = 'var(--danger)';
+      }
+    });
+  }
 }
 
 async function getActivePageData() {
@@ -2063,7 +2112,8 @@ async function getActivePageData() {
       func: () => ({
         title: document.title,
         url: window.location.href,
-        text: document.body.innerText
+        text: document.body.innerText,
+        html: document.body.innerHTML
       })
     });
     return results[0]?.result;
