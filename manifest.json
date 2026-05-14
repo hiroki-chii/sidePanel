@@ -69,6 +69,24 @@
         "content-ai.js"
       ],
       "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content-hint.js"
+      ],
+      "run_at": "document_end"
     }
-  ]
+  ],
+  "commands": {
+    "toggle-numbering": {
+      "suggested_key": {
+        "default": "Alt+Shift+L",
+        "mac": "Command+Shift+L"
+      },
+      "description": "クリック要素の採番モードを切り替える"
+    }
+  }
 }
