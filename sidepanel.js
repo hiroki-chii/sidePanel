@@ -1275,7 +1275,8 @@ function setupFeatures() {
       "・誤送信防止：AIチャット等でのEnter送信をガード",
       "・YouTubeミニプレイヤー：スクロール連動のフローティング再生",
       "・Gemini Canvas拡張：プレビューの全画面表示",
-      "・ページテキスト取得：Markdown/HTML形式での抽出"
+      "・ページテキスト取得：Markdown/HTML形式での抽出",
+      "・クリック要素の採番：キーボード操作による要素選択と実行"
     ];
     showAlert(list.join("\n\n"), "機能一覧");
   });
