@@ -1241,7 +1241,7 @@ function loadToolsSettings() {
     { id: 'toggleAiEnterGuard', key: 'aiEnterGuard', default: true },
     { id: 'toggleMiniPlayer', key: 'miniPlayerEnabled', default: true },
     { id: 'miniPlayerSize', key: 'miniPlayerSize', default: 'small' },
-    { id: 'toggleNumberingEnabled', key: 'numberingEnabled', default: true }
+    { id: 'toggleNumberingEnabled', key: 'numberingEnabled', default: false }
   ];
 
   const sizeSelect = document.getElementById('miniPlayerSize');
