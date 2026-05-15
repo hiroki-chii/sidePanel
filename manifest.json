@@ -11,7 +11,8 @@
     "favicon",
     "storage",
     "scripting",
-    "activeTab"
+    "activeTab",
+    "declarativeNetRequest"
   ],
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*",

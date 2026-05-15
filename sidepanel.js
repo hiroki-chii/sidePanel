@@ -48,6 +48,12 @@ const dom = {
   splitResizer: document.getElementById('splitResizer'),
   addressSuggestions: document.getElementById('addressSuggestions'),
   newFolderBtn: document.getElementById('newFolderBtn'),
+  navWeb: document.getElementById('navWeb'),
+  webPanel: document.getElementById('webPanel'),
+  webIframe: document.getElementById('webIframe'),
+  webEmpty: document.getElementById('webEmpty'),
+  syncTabBtn: document.getElementById('syncTabBtn'),
+  exportTabBtn: document.getElementById('exportTabBtn'),
 };
 
 // ===========================
@@ -71,6 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupNumberingMode();
   setupCustomModal();
   setupTheme();
+  setupWebView();
 
   // 永続化された状態の復元
   await loadAppState();
@@ -240,7 +247,7 @@ function setupNavigation() {
     updateFullscreenHighlight();
   });
 
-  dom.navTools?.addEventListener('click', () => switchTab(state.activeTab === 'tools' ? 'tabs' : 'tools'));
+  dom.navTools?.addEventListener('click', () => switchTab('tools'));
   dom.navMain?.addEventListener('click', () => switchTab('tabs'));
 }
 
@@ -350,26 +357,26 @@ function applyTheme() {
 
 function switchTab(tab) {
   state.activeTab = tab;
-  // ツールタブ以外は「タブ＋ブックマーク」の分割表示を維持
-  state.isSplitView = (tab !== 'tools');
+  // ツールタブとウェブタブ以外は「タブ＋ブックマーク」の分割表示を維持
+  state.isSplitView = (tab !== 'tools' && tab !== 'web');
 
   applySplitView();
 
   // ナビゲーションボタンのアクティブ表示更新
   dom.navMain?.classList.toggle('active', state.isSplitView);
   dom.navTools?.classList.toggle('active', tab === 'tools');
+  dom.navWeb?.classList.toggle('active', tab === 'web');
 
   // パネルの表示制御
-  if (!state.isSplitView) {
-    dom.tabsPanel.classList.remove('active');
-    dom.bookmarksPanel.classList.remove('active');
-    dom.toolsPanel?.classList.add('active');
-    document.getElementById('addressBarContainer')?.style.setProperty('display', 'none');
-  } else {
-    dom.tabsPanel.classList.add('active');
-    dom.bookmarksPanel.classList.add('active');
-    dom.toolsPanel?.classList.remove('active');
-    document.getElementById('addressBarContainer')?.style.setProperty('display', 'flex');
+  dom.tabsPanel.classList.toggle('active', state.isSplitView);
+  dom.bookmarksPanel.classList.toggle('active', state.isSplitView);
+  dom.toolsPanel?.classList.toggle('active', tab === 'tools');
+  dom.webPanel?.classList.toggle('active', tab === 'web');
+
+  // アドレスバーの表示制御 (ツールタブ以外は表示)
+  const addressBar = document.getElementById('addressBarContainer');
+  if (addressBar) {
+    addressBar.style.display = (tab === 'tools') ? 'none' : 'flex';
   }
 
   saveAppState();
@@ -1548,3 +1555,71 @@ if (typeof marked !== 'undefined') {
 // 共通イベント
 document.getElementById('summaryResultArea')?.addEventListener('input', updateMarkdownPreview);
 setupOutputTabs();
+
+// ===========================
+// ウェブ表示機能
+// ===========================
+
+/**
+ * ウェブ表示パネルのセットアップ
+ */
+function setupWebView() {
+  dom.navWeb?.addEventListener('click', () => {
+    switchTab('web');
+  });
+
+  dom.syncTabBtn?.addEventListener('click', () => {
+    transferCurrentTabToSidePanel();
+  });
+
+  dom.exportTabBtn?.addEventListener('click', async () => {
+    const url = dom.webIframe?.src;
+    if (url && url !== 'about:blank' && url !== '') {
+      await chrome.tabs.create({ url });
+      showToast('メイン画面でページを開きました');
+    } else {
+      showToast('表示中のページがありません');
+    }
+  });
+
+  // エラー時のオーバーレイ
+  const overlay = document.getElementById('iframeOverlay');
+  const externalBtn = document.getElementById('openExternalBtn');
+
+  dom.webIframe?.addEventListener('load', () => {
+    overlay?.classList.add('hidden');
+  });
+
+  externalBtn?.addEventListener('click', async () => {
+    const url = dom.webIframe?.src;
+    if (url && url !== 'about:blank') {
+      await chrome.tabs.create({ url });
+    }
+  });
+}
+
+/**
+ * 現在のタブをサイドパネルに転送
+ */
+async function transferCurrentTabToSidePanel() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.url) return;
+
+    // セキュリティ制限のあるページは除外
+    if (/^(chrome|about|edge|chrome-extension):/i.test(tab.url)) {
+      showToast('このページはサイドパネルで表示できません');
+      return;
+    }
+
+    if (dom.webIframe) {
+      dom.webIframe.src = tab.url;
+      dom.webIframe.classList.remove('hidden');
+      dom.webEmpty?.classList.add('hidden');
+      showToast('ページを読み込みました');
+    }
+  } catch (error) {
+    console.error('Transfer error:', error);
+    showToast('転送に失敗しました');
+  }
+}

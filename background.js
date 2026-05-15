@@ -49,3 +49,56 @@ chrome.commands.onCommand.addListener((command) => {
     });
   }
 });
+
+// ===========================
+// iframeのブロック回避 (declarativeNetRequest)
+// ===========================
+const RULE_ID_XFRAME = 1;
+const RULE_ID_CSP = 2;
+
+async function setupIframeRules() {
+  const rules = [
+    {
+      id: RULE_ID_XFRAME,
+      priority: 1,
+      action: {
+        type: 'modifyHeaders',
+        responseHeaders: [
+          { header: 'x-frame-options', operation: 'remove' },
+          { header: 'frame-options', operation: 'remove' }
+        ]
+      },
+      condition: {
+        resourceTypes: ['sub_frame']
+      }
+    },
+    {
+      id: RULE_ID_CSP,
+      priority: 1,
+      action: {
+        type: 'modifyHeaders',
+        responseHeaders: [
+          { header: 'content-security-policy', operation: 'remove' }
+        ]
+      },
+      condition: {
+        resourceTypes: ['sub_frame']
+      }
+    }
+  ];
+
+  await chrome.declarativeNetRequest.updateDynamicRules({
+    removeRuleIds: [RULE_ID_XFRAME, RULE_ID_CSP],
+    addRules: rules
+  });
+}
+
+// 起動時にルールを設定
+chrome.runtime.onInstalled.addListener(() => {
+  setupIframeRules();
+});
+
+// ブラウザ起動時にも再設定（確実性の向上）
+chrome.runtime.onStartup.addListener(() => {
+  setupIframeRules();
+});
