@@ -23,6 +23,14 @@
     - **Empty State (未表示時のUI)**:
         - 中央のボタンを廃止し、上部の「現在のページを表示」ボタンの使用を促すメッセージに変更。
 
+- **2026-05-15 11:15 リファクタリング**:
+    - `sidepanel.js` のコード品質改善を実施。
+    - **DRY原則**: システムページ判定パターン（`/^(chrome|edge|about|chrome-extension):/i`）を `SYSTEM_PAGE_PATTERN` 定数に統一（5箇所の重複排除）。
+    - **関数抽出**: iframe URL取得（`getIframeUrl`）、メイン画面での表示（`openIframeInMainWindow`）を共通関数化し、exportTabBtnとexternalBtnの重複ロジックを統合。
+    - **モダン構文化**: `navigate` 関数のif-elseチェーンをMap参照によるディスパッチに置き換え。
+    - **DOM参照の最適化**: `addressBarContainer` をdom参照キャッシュに追加し、`document.getElementById` の都度取得を排除。
+    - **コードの簡潔化**: setupWebView内の冗長なアロー関数ラッパーを直接参照に変更。
+
 - **使い方**:
     1. サイドパネルの地球儀アイコンをクリックして「ウェブ表示モード」に切り替え。
     2. 自動的に現在のタブのページがサイドパネル内の `iframe` に読み込まれる。

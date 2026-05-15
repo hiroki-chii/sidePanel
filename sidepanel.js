@@ -13,8 +13,11 @@ const _sidePanelPort = chrome.runtime.connect({ name: 'sidepanel' });
  * アプリケーションのグローバルステート
  * コンポーネント間でのデータ共有と、ストレージへの永続化に使用します。
  */
+/** システムページ判定用パターン（chrome://, about:, edge:// 等のスクリプト実行不可ページ） */
+const SYSTEM_PAGE_PATTERN = /^(chrome|edge|about|chrome-extension):/i;
+
 const state = {
-  activeTab: 'tabs', // 'tabs' | 'bookmarks' | 'tools'
+  activeTab: 'tabs', // 'tabs' | 'bookmarks' | 'tools' | 'web'
   tabs: [],
   bookmarks: [],
   openFolderIds: new Set(), // ユーザーが展開したブックマークフォルダのID
@@ -48,6 +51,7 @@ const dom = {
   splitResizer: document.getElementById('splitResizer'),
   addressSuggestions: document.getElementById('addressSuggestions'),
   newFolderBtn: document.getElementById('newFolderBtn'),
+  addressBarContainer: document.getElementById('addressBarContainer'),
   navWeb: document.getElementById('navWeb'),
   webPanel: document.getElementById('webPanel'),
   webIframe: document.getElementById('webIframe'),
@@ -103,8 +107,7 @@ function applySplitView() {
   content.classList.toggle('split-mode', state.isSplitView);
 
   if (state.isSplitView) {
-    const addressBar = document.getElementById('addressBarContainer');
-    if (addressBar) addressBar.style.display = 'flex';
+    if (dom.addressBarContainer) dom.addressBarContainer.style.display = 'flex';
 
     renderTabs();
     renderBookmarks();
@@ -219,14 +222,12 @@ function applySplitRatio() {
 // ===========================
 
 function setupNavigation() {
+  /** ブラウザのナビゲーション操作をAPIにディスパッチ */
+  const navActions = { back: 'goBack', forward: 'goForward', reload: 'reload' };
   const navigate = async (direction) => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab) return;
-    
-    if (direction === 'back') await chrome.tabs.goBack(tab.id);
-    else if (direction === 'forward') await chrome.tabs.goForward(tab.id);
-    else if (direction === 'reload') await chrome.tabs.reload(tab.id);
-    
+    await chrome.tabs[navActions[direction]](tab.id);
     setTimeout(updateNavButtonsStatus, 150);
   };
 
@@ -260,7 +261,7 @@ async function updateNavButtonsStatus() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     // システムページ等、スクリプト実行不可なページでは一律無効化
-    if (!tab?.url || /^(chrome|edge|about|chrome-extension):/i.test(tab.url)) {
+    if (!tab?.url || SYSTEM_PAGE_PATTERN.test(tab.url)) {
       dom.navBack.disabled = dom.navForward.disabled = true;
       return;
     }
@@ -374,9 +375,8 @@ function switchTab(tab) {
   dom.webPanel?.classList.toggle('active', tab === 'web');
 
   // アドレスバーの表示制御 (ツールタブ以外は表示)
-  const addressBar = document.getElementById('addressBarContainer');
-  if (addressBar) {
-    addressBar.style.display = (tab === 'tools') ? 'none' : 'flex';
+  if (dom.addressBarContainer) {
+    dom.addressBarContainer.style.display = (tab === 'tools') ? 'none' : 'flex';
   }
 
   saveAppState();
@@ -587,7 +587,7 @@ async function createBookmarkFolder(parentId = '1') {
 async function updateBookmarkButton(url) {
   if (!dom.bookmarkPageBtn) return;
 
-  const isRestricted = !url || /^(chrome|chrome-extension):/i.test(url);
+  const isRestricted = !url || SYSTEM_PAGE_PATTERN.test(url);
   dom.bookmarkPageBtn.disabled = isRestricted;
   
   if (isRestricted) {
@@ -1277,12 +1277,16 @@ function loadToolsSettings() {
 function setupFeatures() {
   dom.navFeatures?.addEventListener('click', () => {
     const list = [
-      "・タブ管理＆検索：タブの切り替え、検索、ミュート操作",
-      "・ブックマーク：ツリー形式での表示とD&D管理",
+      "・タブ管理＆検索：タブの切り替え、検索、ピン留め、ミュート操作、ドラッグ＆ドロップによる並べ替え",
+      "・ブックマーク：ツリー形式での表示、フォルダ管理、D&D並べ替え",
+      "・分割表示：タブとブックマークの同時表示、リサイザーによる比率調整",
+      "・アドレスバー：URL入力、タブ/ブックマーク/履歴からのサジェスト検索",
+      "・ウェブ表示：現在のページをサイドパネル内で表示、メイン画面への移動",
+      "・テーマ切替：ライト / ダーク / システム連動",
       "・誤送信防止：AIチャット等でのEnter送信をガード",
       "・YouTubeミニプレイヤー：スクロール連動のフローティング再生",
       "・Gemini Canvas拡張：プレビューの全画面表示",
-      "・ページテキスト取得：Markdown/HTML形式での抽出",
+      "・ページテキスト取得：Markdown/HTML形式での抽出とコピー",
       "・クリック要素の採番：キーボード操作による要素選択と実行"
     ];
     showAlert(list.join("\n\n"), "機能一覧");
@@ -1469,7 +1473,7 @@ function setupSummaryTool() {
 
 async function getActivePageData() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id || /^(chrome|edge|about|chrome-extension):/i.test(tab.url)) {
+  if (!tab?.id || SYSTEM_PAGE_PATTERN.test(tab.url)) {
     if (tab) throw new Error('SYSTEM_PAGE_RESTRICTED');
     return null;
   }
@@ -1497,7 +1501,7 @@ async function checkSiteAndConfirm(area, status) {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.url) return false;
 
-  if (/^(chrome|edge|about|chrome-extension):/i.test(tab.url)) {
+  if (SYSTEM_PAGE_PATTERN.test(tab.url)) {
     area.value = '【制限】システムページです。';
     status.textContent = 'エラー';
     status.style.display = 'block';
@@ -1560,42 +1564,35 @@ setupOutputTabs();
 // ウェブ表示機能
 // ===========================
 
+/** iframeの現在のURLを取得（空の場合はnullを返す） */
+function getIframeUrl() {
+  const url = dom.webIframe?.src;
+  return (url && url !== 'about:blank' && url !== '') ? url : null;
+}
+
+/** iframeのURLをメインブラウザのタブで開く */
+async function openIframeInMainWindow(message) {
+  const url = getIframeUrl();
+  if (url) {
+    await chrome.tabs.create({ url });
+    if (message) showToast(message);
+  } else {
+    showToast('表示中のページがありません');
+  }
+}
+
 /**
  * ウェブ表示パネルのセットアップ
  */
 function setupWebView() {
-  dom.navWeb?.addEventListener('click', () => {
-    switchTab('web');
-  });
-
-  dom.syncTabBtn?.addEventListener('click', () => {
-    transferCurrentTabToSidePanel();
-  });
-
-  dom.exportTabBtn?.addEventListener('click', async () => {
-    const url = dom.webIframe?.src;
-    if (url && url !== 'about:blank' && url !== '') {
-      await chrome.tabs.create({ url });
-      showToast('メイン画面でページを開きました');
-    } else {
-      showToast('表示中のページがありません');
-    }
-  });
+  dom.navWeb?.addEventListener('click', () => switchTab('web'));
+  dom.syncTabBtn?.addEventListener('click', () => transferCurrentTabToSidePanel());
+  dom.exportTabBtn?.addEventListener('click', () => openIframeInMainWindow('メイン画面でページを開きました'));
 
   // エラー時のオーバーレイ
   const overlay = document.getElementById('iframeOverlay');
-  const externalBtn = document.getElementById('openExternalBtn');
-
-  dom.webIframe?.addEventListener('load', () => {
-    overlay?.classList.add('hidden');
-  });
-
-  externalBtn?.addEventListener('click', async () => {
-    const url = dom.webIframe?.src;
-    if (url && url !== 'about:blank') {
-      await chrome.tabs.create({ url });
-    }
-  });
+  dom.webIframe?.addEventListener('load', () => overlay?.classList.add('hidden'));
+  document.getElementById('openExternalBtn')?.addEventListener('click', () => openIframeInMainWindow());
 }
 
 /**
@@ -1607,7 +1604,7 @@ async function transferCurrentTabToSidePanel() {
     if (!tab?.url) return;
 
     // セキュリティ制限のあるページは除外
-    if (/^(chrome|about|edge|chrome-extension):/i.test(tab.url)) {
+    if (SYSTEM_PAGE_PATTERN.test(tab.url)) {
       showToast('このページはサイドパネルで表示できません');
       return;
     }
