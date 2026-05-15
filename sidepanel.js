@@ -1298,16 +1298,8 @@ function setupFeatures() {
 // ===========================
 
 function setupNumberingMode() {
-  const numberingInput = document.getElementById('numberingInput');
-  const numberingDataList = document.getElementById('numberingDataList');
   const toggleNumberingEnabled = document.getElementById('toggleNumberingEnabled');
-  
-  if (!numberingInput || !toggleNumberingEnabled) return;
-
-  // トグル変更時の処理
-  chrome.storage.local.get(['isNumberingMode'], (res) => {
-    numberingInput.style.display = res.isNumberingMode ? 'inline-block' : 'none';
-  });
+  if (!toggleNumberingEnabled) return;
 
   // マスタースイッチ変更時の連動
   toggleNumberingEnabled.addEventListener('change', () => {
@@ -1319,10 +1311,7 @@ function setupNumberingMode() {
   chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local' && changes.isNumberingMode !== undefined) {
       const isModeOn = changes.isNumberingMode.newValue;
-      numberingInput.style.display = isModeOn ? 'inline-block' : 'none';
       if (!isModeOn) {
-        numberingInput.value = '';
-        numberingDataList.innerHTML = '';
         // モード解除時にページにフォーカスを戻す
         chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
           if (tabs[0]) {
@@ -1333,67 +1322,11 @@ function setupNumberingMode() {
     }
   });
 
-  // 共通のクリック実行処理
-  const triggerClick = (value) => {
-    if (!value) return;
-    chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
-      if (tabs[0]) {
-        chrome.tabs.sendMessage(tabs[0].id, { action: 'clickHint', index: parseInt(value, 10) });
-        // クリック後にモードを自動解除
-        chrome.storage.local.set({ isNumberingMode: false });
-        numberingInput.blur();
-        numberingInput.value = '';
-      }
-    });
-  };
-
-  // Enter/Escキーでの操作処理
-  numberingInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      triggerClick(numberingInput.value);
-    } else if (e.key === 'Escape') {
-      chrome.storage.local.set({ isNumberingMode: false });
-      numberingInput.blur();
-    }
-  });
-
-  // リストから選択された時（または入力確定時）に即実行
-  numberingInput.addEventListener('change', () => {
-    chrome.storage.local.get(['isNumberingMode'], (res) => {
-      if (res.isNumberingMode) {
-        triggerClick(numberingInput.value);
-      }
-    });
-  });
-
-  // メッセージリスナー（背景やコンテンツスクリプトからの通知）
+  // メッセージリスナー
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'focusNumberingSelect') {
-      // ショートカット等でモードがONになった時、入力欄にフォーカスする
+      // ショートカット等でモードがONになった時、ツールタブに切り替え
       switchTab('tools');
-      setTimeout(() => {
-        numberingInput.focus();
-        numberingInput.select();
-      }, 100);
-    } else if (message.action === 'updateNumberingList') {
-      // ページ内の要素リストを受け取り、データリストを更新
-      const elements = message.elements || [];
-      const currentHash = JSON.stringify(elements);
-      
-      if (numberingInput.dataset.lastHash === currentHash) {
-        return;
-      }
-      numberingInput.dataset.lastHash = currentHash;
-
-      numberingDataList.innerHTML = '';
-      
-      elements.forEach(el => {
-        const option = document.createElement('option');
-        option.value = el.index;
-        option.textContent = `[${el.index}] ${escapeHTML(el.text).substring(0, 15)}`;
-        numberingDataList.appendChild(option);
-      });
     }
   });
 }
