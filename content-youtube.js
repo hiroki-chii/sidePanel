@@ -265,9 +265,15 @@
         max-height: 450px;
       }
       #yt-ext-floating-player video {
+        position: absolute !important;
         width: 100% !important;
         height: 100% !important;
         object-fit: contain !important;
+        left: 0 !important;
+        top: 0 !important;
+        transform: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
       }
       #yt-ext-floating-player.yt-ext-enter {
         transform: translateY(20px);
