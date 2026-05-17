@@ -195,3 +195,10 @@
     - `content-youtube.js`: ミニプレイヤー用スタイル定義（`#yt-ext-floating-player video`）を強化。
     - `position: absolute !important`, `left: 0 !important`, `top: 0 !important`, `transform: none !important`, `margin: 0 !important`, `padding: 0 !important` を強制指定することで、YouTube側の計算スクリプトによるインラインスタイルの干渉を完全にリセットし、常にミニプレイヤーコンテナの中央に正しく動画がレンダリングされるように修正。
 
+## 2026-05-17 21:20
+### 「マウスホイール文字入力」のサイドパネルアドレスバーおよびiframe内への適用
+- 「マウスホイール文字入力（および中クリック漢字変換）」をサイドパネル内のアドレスバーや各種入力欄、さらにiframe（ウェブ表示など）内でも動作するように拡張。
+- **実装内容**:
+    - `sidepanel.html`: スクリプト末尾に `content-wheel-select.js` を追加。これにより、サイドパネル上のアドレスバー（`#addressInput`）やMarkdown取得用エリア（`#summaryResultArea`）でもダイヤルホイール入力・中クリック漢字変換がそのまま動作するように対応。
+    - `content-wheel-select.js`: 変換候補ポップアップのダークモード判定部分を拡張。システムのダークモード判定に加え、サイドパネル独自のテーマ設定（`document.documentElement.classList.contains('dark-theme')`）も判定ロジックに追加することで、サイドパネルでのライト/ダーク/システムテーマ切り替えにポップアップのカラーが完璧に美しく追従するように修正。
+    - `manifest.json`: `<all_urls>` でインジェクトされるコンテンツスクリプト群に `"all_frames": true` を追加。これにより、サイドパネルの「ウェブ表示」パネル内のiframe内や、その他のWebページに含まれるiframe内のインプット要素に対しても機能が完全に適用されるよう拡張。

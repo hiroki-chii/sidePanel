@@ -115,7 +115,7 @@
     popup.style.scrollbarWidth = 'thin';
 
     // ダークモード対応のスタイルを適用
-    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) || document.documentElement.classList.contains('dark-theme');
     if (isDark) {
       popup.style.background = 'rgba(32, 33, 36, 0.98)';
       popup.style.borderColor = 'rgba(255, 255, 255, 0.12)';

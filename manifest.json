@@ -79,6 +79,7 @@
         "content-hint.js",
         "content-wheel-select.js"
       ],
+      "all_frames": true,
       "run_at": "document_end"
     }
   ],
