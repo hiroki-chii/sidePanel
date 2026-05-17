@@ -76,7 +76,8 @@
         "<all_urls>"
       ],
       "js": [
-        "content-hint.js"
+        "content-hint.js",
+        "content-wheel-select.js"
       ],
       "run_at": "document_end"
     }

@@ -1249,7 +1249,8 @@ function loadToolsSettings() {
     { id: 'toggleMiniPlayer', key: 'miniPlayerEnabled', default: true },
     { id: 'miniPlayerSize', key: 'miniPlayerSize', default: 'small' },
     { id: 'toggleNumberingEnabled', key: 'numberingEnabled', default: false },
-    { id: 'toggleYtSidebarBreakpoint', key: 'ytSidebarBreakpointEnabled', default: false }
+    { id: 'toggleYtSidebarBreakpoint', key: 'ytSidebarBreakpointEnabled', default: false },
+    { id: 'toggleWheelSelect', key: 'wheelSelectEnabled', default: false }
   ];
 
   const sizeSelect = document.getElementById('miniPlayerSize');
@@ -1286,9 +1287,11 @@ function setupFeatures() {
       "・テーマ切替：ライト / ダーク / システム連動",
       "・誤送信防止：AIチャット等でのEnter送信をガード",
       "・YouTubeミニプレイヤー：スクロール連動のフローティング再生",
+      "・YouTubeサイドバー配置：右サイドバーを常に動画下に固定表示",
       "・Gemini Canvas拡張：プレビューの全画面表示",
       "・ページテキスト取得：Markdown/HTML形式での抽出とコピー",
-      "・クリック要素の採番：キーボード操作による要素選択と実行"
+      "・クリック要素の採番：キーボード操作による要素選択と実行",
+      "・マウスホイール文字入力：ホバーしてホイール文字入力、中クリックで漢字変換表示"
     ];
     showAlert(list.join("\n\n"), "機能一覧");
   });
