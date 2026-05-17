@@ -8,8 +8,8 @@
 
   console.log('[WheelSelect] Injected: Ultimate Dial Input Mode with Wheel-Click IME!');
 
-  // 英小文字 → 英大文字 → 数字 → ひらがな（ゃゅょっー入り） 巨大ドラム
-  const ALL_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよゃゅょらりるれろわをんっー';
+  // 英小文字 → 英大文字 → 数字 → ひらがな（ゃゅょっー入り） → スペース（半角・全角） 巨大ドラム
+  const ALL_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよゃゅょらりるれろわをんっー　 ';
 
   /**
    * 現在の文字から、ホイール回転方向（上・下）に応じた次の文字を取得する
