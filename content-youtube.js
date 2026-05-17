@@ -1,101 +1,129 @@
 (() => {
-  // === YouTube関連動画の縦並びレイアウト ===
-  // サイドパネル表示中、右サイドバーの動画一覧を
-  // サムネイル+概要の縦並びにして横幅を節約する
+  // === YouTube サイドバー配置制御 ===
+  let ytSidebarBreakpointEnabled = false;
+  let layoutObserver = null;
 
-  const style = document.createElement('style');
-  style.id = 'yt-compact-layout';
-  style.textContent = `
-    /* 新UIのレイアウトコンテナを縦並びに強制 */
-    div.ytLockupViewModelHost.ytLockupViewModelHorizontal {
-      flex-direction: column !important;
+  function initYtSidebarBreakpoint() {
+    chrome.storage.local.get(['ytSidebarBreakpointEnabled'], (result) => {
+      ytSidebarBreakpointEnabled = result.ytSidebarBreakpointEnabled === true;
+      applyYtSidebarBreakpoint();
+    });
+
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+      if (namespace === 'local' && changes.ytSidebarBreakpointEnabled !== undefined) {
+        ytSidebarBreakpointEnabled = changes.ytSidebarBreakpointEnabled.newValue === true;
+        applyYtSidebarBreakpoint();
+      }
+    });
+
+
+
+    // YouTubeのSPA遷移（ページ移動）時にも再セットアップ
+    document.addEventListener('yt-navigate-finish', () => {
+      setupYtLayoutObserver();
+      applyYtSidebarBreakpoint();
+    });
+
+    // 初期セットアップ
+    setupYtLayoutObserver();
+  }
+
+  // YouTubeのレイアウト要素を監視し、YouTubeのJSによる属性上書きを防ぐ
+  function setupYtLayoutObserver() {
+    if (layoutObserver) {
+      layoutObserver.disconnect();
     }
 
-    /* サムネイルを横幅いっぱいに */
-    a.ytLockupViewModelContentImage {
-      width: 100% !important;
-      max-width: none !important;
+    const flexy = document.querySelector('ytd-watch-flexy') || document.querySelector('ytd-watch-grid');
+    if (!flexy) {
+      // 要素がまだ無い場合はポーリングで待機
+      setTimeout(setupYtLayoutObserver, 1000);
+      return;
     }
 
-    a.ytLockupViewModelContentImage ytd-thumbnail,
-    a.ytLockupViewModelContentImage yt-thumbnail-view-model {
-      width: 100% !important;
-      max-width: none !important;
+    layoutObserver = new MutationObserver((mutations) => {
+      if (!ytSidebarBreakpointEnabled) return;
+      
+      for (const m of mutations) {
+        if (m.attributeName === 'is-two-columns_') {
+          // YouTube側が属性を書き換えたら、こちらの設定値で上書き強制する
+          // 無限リサイズループを防ぐため、Observerからの呼び出しであることを伝える
+          applyYtSidebarBreakpoint(true);
+        }
+      }
+    });
+
+    layoutObserver.observe(flexy, { attributes: true, attributeFilter: ['is-two-columns_'] });
+  }
+
+  let isApplying = false; // 無限ループ・クラッシュ防止用のロックフラグ
+
+  // ブレークポイントに基づいて属性を切り替える
+  function applyYtSidebarBreakpoint(isFromObserver = false) {
+    if (isApplying) return; // ロック中は無視
+    
+    const flexy = document.querySelector('ytd-watch-flexy') || document.querySelector('ytd-watch-grid');
+    if (!flexy) return;
+
+    // 以前注入したカスタムスタイルタグがあればクリーンアップ
+    const oldStyle = document.getElementById('yt-ext-sidebar-bp-style');
+    if (oldStyle) {
+      oldStyle.remove();
     }
 
-    /* メタデータ領域 */
-    div.ytLockupViewModelMetadata {
-      width: 100% !important;
-      padding-top: 8px !important;
-    }
+    const width = window.innerWidth;
+    
+    // トグルがOFFの場合は、YouTube本来のデフォルト（約1000px）に従う
+    // トグルがONの場合は、常に1カラム（false）にする
+    const shouldBeTwoColumns = ytSidebarBreakpointEnabled ? false : (width >= 1000);
 
-    /* 旧UI互換: ytd-compact-video-renderer */
-    ytd-compact-video-renderer #dismissible,
-    ytd-compact-radio-renderer #dismissible,
-    ytd-compact-playlist-renderer #dismissible {
-      flex-direction: column !important;
-      align-items: stretch !important;
-    }
-
-    ytd-compact-video-renderer ytd-thumbnail,
-    ytd-compact-radio-renderer ytd-thumbnail,
-    ytd-compact-playlist-renderer ytd-thumbnail {
-      width: 100% !important;
-      max-width: 100% !important;
-      margin-right: 0 !important;
-    }
-
-    ytd-compact-video-renderer ytd-thumbnail #thumbnail,
-    ytd-compact-radio-renderer ytd-thumbnail #thumbnail,
-    ytd-compact-playlist-renderer ytd-thumbnail #thumbnail {
-      width: 100% !important;
-      max-width: 100% !important;
-    }
-
-    ytd-compact-video-renderer .metadata,
-    ytd-compact-radio-renderer .metadata,
-    ytd-compact-playlist-renderer .metadata {
-      padding-top: 8px !important;
-      width: 100% !important;
-      max-width: 100% !important;
-    }
-
-    /* 右サイドバー自体の幅を狭める */
-    #secondary {
-      max-width: 200px !important;
-      min-width: 150px !important;
-    }
-
-    #secondary-inner {
-      max-width: 100% !important;
-    }
-  `;
-  style.disabled = true; // 初期状態は無効
-
-  function inject() {
-    if (!document.getElementById('yt-compact-layout')) {
-      document.head.appendChild(style);
+    const hasAttr = flexy.hasAttribute('is-two-columns_');
+    
+    if (shouldBeTwoColumns !== hasAttr) {
+      isApplying = true; // ロック開始
+      
+      // YouTubeの内部処理（Polymerの描画サイクル等）が落ち着くまで少し待つ
+      // 待つことで「動画が真っ暗になる」非同期タイミングバグを回避する
+      setTimeout(() => {
+        // 監視を一時停止
+        if (layoutObserver) layoutObserver.disconnect();
+        
+        if (shouldBeTwoColumns) {
+          flexy.setAttribute('is-two-columns_', '');
+        } else {
+          flexy.removeAttribute('is-two-columns_');
+        }
+        
+        // 監視を再開
+        if (layoutObserver) {
+          layoutObserver.observe(flexy, { attributes: true, attributeFilter: ['is-two-columns_'] });
+        }
+        
+        // 属性変更後、YouTube純正のサイズ計算を走らせるためにリサイズイベントを発火
+        // （YouTubeの計算が終わった後なので安全に再計算される）
+        window.dispatchEvent(new Event('resize'));
+        
+        // リサイズ発火後、YouTubeが再度属性を戻そうとする可能性があるので、
+        // しばらくの間は再帰的な処理（無限ループ）をロックする
+        setTimeout(() => {
+          isApplying = false; // ロック解除
+        }, 500);
+        
+      }, 100); // 100msのディレイ
+    } else if (!ytSidebarBreakpointEnabled) {
+      // トグルOFFで属性が既に一致している場合、念のため監視だけ外す
+      if (layoutObserver) {
+        layoutObserver.disconnect();
+      }
     }
   }
 
-  // なるべく早く注入
   if (document.head) {
-    inject();
+    initYtSidebarBreakpoint();
   } else {
-    document.addEventListener('DOMContentLoaded', inject);
+    document.addEventListener('DOMContentLoaded', initYtSidebarBreakpoint);
   }
 
-  // サイドパネルの開閉状態をストレージ経由で受信
-  chrome.storage.local.get(['sidePanelOpen'], (result) => {
-    style.disabled = !result.sidePanelOpen;
-  });
-
-  // リアルタイムで反映
-  chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace === 'local' && changes.sidePanelOpen !== undefined) {
-      style.disabled = !changes.sidePanelOpen.newValue;
-    }
-  });
 
   // === YouTube Shorts 自動スクロール ===
   let autoScrollEnabled = false;
