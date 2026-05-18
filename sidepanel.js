@@ -379,9 +379,9 @@ function switchTab(tab) {
   dom.webPanel?.classList.toggle('active', tab === 'web');
   dom.summaryPanel?.classList.toggle('active', tab === 'summary');
 
-  // アドレスバーの表示制御 (ツールタブ、テキスト取得タブ以外は表示)
+  // アドレスバーの表示制御 (ツールタブ、テキスト取得タブ、ウェブ表示タブ以外は表示)
   if (dom.addressBarContainer) {
-    dom.addressBarContainer.style.display = (tab === 'tools' || tab === 'summary') ? 'none' : 'flex';
+    dom.addressBarContainer.style.display = (tab === 'tools' || tab === 'summary' || tab === 'web') ? 'none' : 'flex';
   }
 
   saveAppState();
