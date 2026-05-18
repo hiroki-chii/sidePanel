@@ -17,7 +17,7 @@ const _sidePanelPort = chrome.runtime.connect({ name: 'sidepanel' });
 const SYSTEM_PAGE_PATTERN = /^(chrome|edge|about|chrome-extension):/i;
 
 const state = {
-  activeTab: 'tabs', // 'tabs' | 'bookmarks' | 'tools' | 'web'
+  activeTab: 'tabs', // 'tabs' | 'bookmarks' | 'tools' | 'web' | 'summary'
   tabs: [],
   bookmarks: [],
   openFolderIds: new Set(), // ユーザーが展開したブックマークフォルダのID
@@ -58,6 +58,8 @@ const dom = {
   webEmpty: document.getElementById('webEmpty'),
   syncTabBtn: document.getElementById('syncTabBtn'),
   exportTabBtn: document.getElementById('exportTabBtn'),
+  navSummary: document.getElementById('navSummary'),
+  summaryPanel: document.getElementById('summaryPanel'),
 };
 
 // ===========================
@@ -250,6 +252,7 @@ function setupNavigation() {
 
   dom.navTools?.addEventListener('click', () => switchTab('tools'));
   dom.navMain?.addEventListener('click', () => switchTab('tabs'));
+  dom.navSummary?.addEventListener('click', () => switchTab('summary'));
 }
 
 /**
@@ -358,8 +361,8 @@ function applyTheme() {
 
 function switchTab(tab) {
   state.activeTab = tab;
-  // ツールタブとウェブタブ以外は「タブ＋ブックマーク」の分割表示を維持
-  state.isSplitView = (tab !== 'tools' && tab !== 'web');
+  // ツールタブ、ウェブタブ、テキスト取得タブ以外は「タブ＋ブックマーク」の分割表示を維持
+  state.isSplitView = (tab !== 'tools' && tab !== 'web' && tab !== 'summary');
 
   applySplitView();
 
@@ -367,16 +370,18 @@ function switchTab(tab) {
   dom.navMain?.classList.toggle('active', state.isSplitView);
   dom.navTools?.classList.toggle('active', tab === 'tools');
   dom.navWeb?.classList.toggle('active', tab === 'web');
+  dom.navSummary?.classList.toggle('active', tab === 'summary');
 
   // パネルの表示制御
   dom.tabsPanel.classList.toggle('active', state.isSplitView);
   dom.bookmarksPanel.classList.toggle('active', state.isSplitView);
   dom.toolsPanel?.classList.toggle('active', tab === 'tools');
   dom.webPanel?.classList.toggle('active', tab === 'web');
+  dom.summaryPanel?.classList.toggle('active', tab === 'summary');
 
-  // アドレスバーの表示制御 (ツールタブ以外は表示)
+  // アドレスバーの表示制御 (ツールタブ、テキスト取得タブ以外は表示)
   if (dom.addressBarContainer) {
-    dom.addressBarContainer.style.display = (tab === 'tools') ? 'none' : 'flex';
+    dom.addressBarContainer.style.display = (tab === 'tools' || tab === 'summary') ? 'none' : 'flex';
   }
 
   saveAppState();
@@ -431,6 +436,7 @@ function setupAddressSuggestions() {
 
   let selectedIndex = -1;
   let currentSuggestions = [];
+  let debounceTimeout = null;
 
   const updateSelection = () => {
     const items = dom.addressSuggestions.querySelectorAll('.suggestion-item');
@@ -440,39 +446,62 @@ function setupAddressSuggestions() {
     });
   };
 
-  dom.addressInput.addEventListener('input', async () => {
-    const query = dom.addressInput.value.trim().toLowerCase();
+  dom.addressInput.addEventListener('input', () => {
+    const query = dom.addressInput.value.trim();
     if (query.length < 1) {
       dom.addressSuggestions.classList.add('hidden');
       return;
     }
+    const queryLower = query.toLowerCase();
 
-    // タブ、履歴、ブックマークから候補を取得
-    const [tabs, history, bookmarks] = await Promise.all([
-      chrome.tabs.query({}),
-      chrome.history?.search({ text: query, maxResults: 5 }) ?? Promise.resolve([]),
-      chrome.bookmarks.search(query)
-    ]);
+    clearTimeout(debounceTimeout);
+    debounceTimeout = setTimeout(async () => {
+      // 1. Google検索サジェストをフェッチ
+      let searchSuggestions = [];
+      try {
+        const response = await fetch(`https://suggestqueries.google.com/complete/search?client=chrome&q=${encodeURIComponent(query)}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data && Array.isArray(data[1])) {
+            searchSuggestions = data[1].slice(0, 5).map(keyword => ({
+              type: 'search',
+              title: keyword,
+              url: `https://www.google.com/search?q=${encodeURIComponent(keyword)}`
+            }));
+          }
+        }
+      } catch (e) {
+        console.error('Google Suggest API Error:', e);
+      }
 
-    const seenUrls = new Set();
-    // 現在のタブは除外
-    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (activeTab) seenUrls.add(activeTab.url);
+      // 2. タブ、履歴、ブックマークから候補を取得
+      const [tabs, history, bookmarks] = await Promise.all([
+        chrome.tabs.query({}),
+        chrome.history?.search({ text: query, maxResults: 5 }) ?? Promise.resolve([]),
+        chrome.bookmarks.search(query)
+      ]);
 
-    const match = (text) => text?.toLowerCase().includes(query);
+      const seenUrls = new Set();
+      // 現在のタブは除外
+      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (activeTab) seenUrls.add(activeTab.url);
 
-    const results = [
-      ...tabs.filter(t => match(t.title) || match(t.url)).map(t => ({ type: 'tab', title: t.title, url: t.url, tabId: t.id, windowId: t.windowId })),
-      ...bookmarks.filter(b => b.url && (match(b.title) || match(b.url))).map(b => ({ type: 'bookmark', title: b.title, url: b.url })),
-      ...history.filter(h => h.url && (match(h.title) || match(h.url))).map(h => ({ type: 'history', title: h.title || h.url, url: h.url }))
-    ];
+      const match = (text) => text?.toLowerCase().includes(queryLower);
 
-    currentSuggestions = results
-      .filter(item => !seenUrls.has(item.url) && seenUrls.add(item.url))
-      .slice(0, 10);
+      const results = [
+        ...searchSuggestions,
+        ...tabs.filter(t => match(t.title) || match(t.url)).map(t => ({ type: 'tab', title: t.title, url: t.url, tabId: t.id, windowId: t.windowId })),
+        ...bookmarks.filter(b => b.url && (match(b.title) || match(b.url))).map(b => ({ type: 'bookmark', title: b.title, url: b.url })),
+        ...history.filter(h => h.url && (match(h.title) || match(h.url))).map(h => ({ type: 'history', title: h.title || h.url, url: h.url }))
+      ];
 
-    renderSuggestions(currentSuggestions);
-    selectedIndex = -1;
+      currentSuggestions = results
+        .filter(item => item.type === 'search' || (!seenUrls.has(item.url) && seenUrls.add(item.url)))
+        .slice(0, 10);
+
+      renderSuggestions(currentSuggestions);
+      selectedIndex = -1;
+    }, 150);
   });
 
   dom.addressInput.addEventListener('keydown', (e) => {
@@ -502,12 +531,13 @@ function setupAddressSuggestions() {
     }
 
     const typeIcons = {
+      search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
       tab: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>',
       bookmark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
       history: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
     };
 
-    const typeLabels = { tab: 'タブ', bookmark: 'ブックマーク', history: '履歴' };
+    const typeLabels = { search: 'Google 検索', tab: 'タブ', bookmark: 'ブックマーク', history: '履歴' };
 
     dom.addressSuggestions.innerHTML = suggestions.map((s, i) => `
       <div class="suggestion-item ${s.type}" data-index="${i}">
@@ -1344,18 +1374,6 @@ function setupSummaryTool() {
   const statusDisplay = document.getElementById('summaryStatus');
   if (!resultArea) return;
 
-  // 折りたたみ制御
-  const header = document.getElementById('summaryToolHeader');
-  header?.addEventListener('click', () => {
-    const group = header.closest('.collapsible-group');
-    const isOpen = group.classList.toggle('open');
-    chrome.storage.local.set({ summaryToolExpanded: isOpen });
-  });
-
-  chrome.storage.local.get(['summaryToolExpanded'], (res) => {
-    if (res.summaryToolExpanded) header?.closest('.collapsible-group')?.classList.add('open');
-  });
-
   // コピー・クリア
   document.getElementById('copySummaryBtn')?.addEventListener('click', () => {
     if (resultArea.value) { navigator.clipboard.writeText(resultArea.value); showToast('コピー完了'); }
@@ -1366,6 +1384,12 @@ function setupSummaryTool() {
     const preview = document.getElementById('summaryPreviewArea');
     if (preview) preview.innerHTML = '';
     if (statusDisplay) statusDisplay.style.display = 'none';
+
+    // プレビュータブを再表示して編集タブへ切り替え
+    const previewTab = document.querySelector('.output-tab[data-group="summary"][data-mode="preview"]');
+    if (previewTab) previewTab.style.display = 'inline-block';
+    const editTab = document.querySelector('.output-tab[data-group="summary"][data-mode="edit"]');
+    editTab?.click();
   });
 
   // 取得ボタン (MD/HTML共通化)
@@ -1393,6 +1417,18 @@ function setupSummaryTool() {
       updateMarkdownPreview();
       await navigator.clipboard.writeText(output);
       
+      // HTML形式の時はプレビュー（表示）タブを非表示にし、編集タブへ切り替える
+      const previewTab = document.querySelector('.output-tab[data-group="summary"][data-mode="preview"]');
+      const editTab = document.querySelector('.output-tab[data-group="summary"][data-mode="edit"]');
+      if (previewTab) {
+        if (format === 'html') {
+          previewTab.style.display = 'none';
+          editTab?.click();
+        } else {
+          previewTab.style.display = 'inline-block';
+        }
+      }
+
       showToast(`${format.toUpperCase()}形式で取得・コピー完了`);
       statusDisplay.textContent = '完了';
       statusDisplay.style.color = 'var(--text-primary)';
@@ -1481,6 +1517,10 @@ function setupOutputTabs() {
         preview.classList.add('hidden');
       } else {
         updateMarkdownPreview();
+        // リサイズされたテキストエリアの高さをプレビュー領域に動的同期
+        if (result.id === 'summaryResultArea') {
+          preview.style.height = `${result.offsetHeight}px`;
+        }
         result.classList.add('hidden');
         preview.classList.remove('hidden');
       }

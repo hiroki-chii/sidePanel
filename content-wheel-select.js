@@ -180,6 +180,7 @@
       if (!targetEl) return;
 
       const tag = targetEl.tagName;
+      if (tag === 'TEXTAREA' && targetEl.clientHeight > 80) return; // 縦幅80px超の大きな textarea は除外（Google検索欄などは許可）
       if (tag !== 'TEXTAREA' && !(tag === 'INPUT' && isTextInput(targetEl))) {
         return;
       }
@@ -244,6 +245,7 @@
       if (!activeEl) return;
 
       const tag = activeEl.tagName;
+      if (tag === 'TEXTAREA' && activeEl.clientHeight > 80) return; // 縦幅80px超の大きな textarea は除外
       if (tag !== 'TEXTAREA' && !(tag === 'INPUT' && isTextInput(activeEl))) {
         return;
       }
@@ -273,6 +275,7 @@
       if (!targetEl) return;
 
       const tag = targetEl.tagName;
+      if (tag === 'TEXTAREA' && targetEl.clientHeight > 80) return; // 縦幅80px超の大きな textarea は除外
       if (tag !== 'TEXTAREA' && !(tag === 'INPUT' && isTextInput(targetEl))) {
         return;
       }
@@ -332,7 +335,8 @@
       middleMouseDownHandler = (e) => {
         if (e.button === 1) {
           const tag = e.target.tagName;
-          if (tag === 'TEXTAREA' || (tag === 'INPUT' && isTextInput(e.target))) {
+          const isLargeTextarea = tag === 'TEXTAREA' && e.target.clientHeight > 80;
+          if (!isLargeTextarea && (tag === 'TEXTAREA' || (tag === 'INPUT' && isTextInput(e.target)))) {
             e.preventDefault();
             e.stopPropagation();
           }

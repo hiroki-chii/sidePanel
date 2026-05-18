@@ -619,6 +619,7 @@ body {
 #navMain.active,
 #navTools.active,
 #navWeb.active,
+#navSummary.active,
 #navFullscreen.active {
   background: var(--accent-subtle);
   color: var(--accent);

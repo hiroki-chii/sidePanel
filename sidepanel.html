@@ -45,8 +45,15 @@
         </svg>
       </button>
 
-
-      <div class="nav-divider"></div>
+      <button id="navSummary" class="nav-btn" title="ページテキスト取得">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" y1="13" x2="8" y2="13" />
+          <line x1="16" y1="17" x2="8" y2="17" />
+          <line x1="10" y1="9" x2="8" y2="9" />
+        </svg>
+      </button>
 
       <button id="navWeb" class="nav-btn" title="ウェブ表示">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -140,86 +147,7 @@
     <!-- ツール一覧 -->
     <section id="toolsPanel" class="panel">
       <!-- ツールの各アイテムを同レベルに指定して間隔を統一 -->
-      <!-- ページテキスト取得ツール -->
-      <div class="settings-group collapsible-group">
-        <div class="setting-item collapsible-header" id="summaryToolHeader">
-          <div class="setting-info">
-            <div class="setting-title">ページテキスト取得</div>
-            <div class="setting-desc">表示中の内容をマークダウン、HTML形式で取得します。</div>
-          </div>
-          <div class="chevron-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </div>
-        </div>
-        <div class="collapsible-content" id="summaryToolContent">
-          <div class="setting-item"
-            style="flex-direction: column; align-items: stretch; gap: 12px; padding: 12px; border-top: none;">
 
-            <div style="display: flex; gap: 8px;">
-              <button id="copyMdBtn" class="action-btn" title="ページ内容をMarkdown形式で取得"
-                style="flex: 1; background-color: var(--accent); color: white; border-style: solid; border-color: var(--accent);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-                  <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-                  <path d="M9 14h6" />
-                  <path d="M9 10h6" />
-                  <path d="M9 18h6" />
-                </svg>
-                <span>MD形式で取得</span>
-              </button>
-              <button id="copyHtmlBtn" class="action-btn" title="ページ内容をHTML形式で取得"
-                style="flex: 1; background-color: var(--bg-secondary); color: var(--text-primary); border-style: solid; border-color: var(--border);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M16 18l6-6-6-6M8 6l-6 6 6 6" />
-                </svg>
-                <span>HTML形式で取得</span>
-              </button>
-            </div>
-
-            <div id="summaryStatus"
-              style="font-size: 12px; color: var(--text-muted); text-align: center; display: none;">処理中...</div>
-
-            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
-              <button id="copySummaryBtn" class="action-btn"
-                style="padding: 4px 8px; font-size: 11px; display: flex; align-items: center; gap: 4px; flex: none;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  style="width: 14px; height: 14px;">
-                  <rect x="9" y="9" width="13" height="13" rx="2" />
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                </svg>
-                <span>コピー</span>
-              </button>
-              <button id="clearSummaryBtn" class="action-btn"
-                style="padding: 4px 8px; font-size: 11px; display: flex; align-items: center; gap: 4px; flex: none;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  style="width: 14px; height: 14px;">
-                  <path
-                    d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
-                </svg>
-                <span>クリア</span>
-              </button>
-            </div>
-
-            <div class="output-container">
-              <div class="output-header">
-                <div class="output-tabs">
-                  <button class="output-tab active" data-mode="edit" data-target="summaryResultArea"
-                    data-group="summary">編集</button>
-                  <button class="output-tab" data-mode="preview" data-target="summaryPreviewArea"
-                    data-group="summary">表示</button>
-                </div>
-              </div>
-              <textarea id="summaryResultArea" rows="8" placeholder="取得したテキストがここに表示されます..."
-                style="width: 100%; border-radius: 0 0 var(--radius-md) var(--radius-md); border: 1px solid var(--border); border-top: none; background: var(--bg-tertiary); color: var(--text-primary); padding: 12px; resize: vertical; box-sizing: border-box; font-size: 13px; line-height: 1.6; outline: none;"></textarea>
-              <div id="summaryPreviewArea" class="markdown-body hidden"
-                style="width: 100%; min-height: 150px; max-height: 500px; overflow-y: auto; border-radius: 0 0 var(--radius-md) var(--radius-md); border: 1px solid var(--border); border-top: none; background: var(--bg-tertiary); color: var(--text-primary); padding: 12px; box-sizing: border-box; font-size: 13px; line-height: 1.6;">
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <div class="setting-item">
         <div class="setting-info">
@@ -349,6 +277,76 @@
         <div id="iframeOverlay" class="iframe-overlay hidden">
           <p>このページは表示できません</p>
           <button id="openExternalBtn" class="action-btn">ブラウザで開く</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ページテキスト取得パネル -->
+    <section id="summaryPanel" class="panel">
+      <div class="window-separator">
+      </div>
+      <div
+        style="display: flex; flex-direction: column; gap: 12px; padding: 12px; height: calc(100% - 37px); box-sizing: border-box;">
+        <div style="display: flex; gap: 8px;">
+          <button id="copyMdBtn" class="action-btn" title="ページ内容をMarkdown形式で取得"
+            style="flex: 1; background-color: var(--accent); color: white; border-style: solid; border-color: var(--accent);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+              <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+              <path d="M9 14h6" />
+              <path d="M9 10h6" />
+              <path d="M9 18h6" />
+            </svg>
+            <span>MD形式で取得</span>
+          </button>
+          <button id="copyHtmlBtn" class="action-btn" title="ページ内容をHTML形式で取得"
+            style="flex: 1; background-color: var(--bg-secondary); color: var(--text-primary); border-style: solid; border-color: var(--border);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M16 18l6-6-6-6M8 6l-6 6 6 6" />
+            </svg>
+            <span>HTML形式で取得</span>
+          </button>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 24px;">
+          <div id="summaryStatus" style="font-size: 12px; color: var(--text-muted); display: none; font-weight: 500;">
+            処理中...</div>
+          <div style="display: flex; gap: 8px; align-items: center; margin-left: auto;">
+            <button id="copySummaryBtn" class="action-btn"
+              style="padding: 4px 8px; font-size: 11px; display: flex; align-items: center; gap: 4px; flex: none;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                style="width: 14px; height: 14px;">
+                <rect x="9" y="9" width="13" height="13" rx="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+              <span>コピー</span>
+            </button>
+            <button id="clearSummaryBtn" class="action-btn"
+              style="padding: 4px 8px; font-size: 11px; display: flex; align-items: center; gap: 4px; flex: none;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                style="width: 14px; height: 14px;">
+                <path
+                  d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+              </svg>
+              <span>クリア</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="output-container" style="flex: 1; min-height: 0; display: block;">
+          <div class="output-header" style="width: 100%;">
+            <div class="output-tabs">
+              <button class="output-tab active" data-mode="edit" data-target="summaryResultArea"
+                data-group="summary">編集</button>
+              <button class="output-tab" data-mode="preview" data-target="summaryPreviewArea"
+                data-group="summary">表示</button>
+            </div>
+          </div>
+          <textarea id="summaryResultArea" placeholder="取得したテキストがここに表示されます..."
+            style="width: 100%; height: 320px; border-radius: 0 0 var(--radius-md) var(--radius-md); border: 1px solid var(--border); border-top: none; background: var(--bg-tertiary); color: var(--text-primary); padding: 12px; resize: vertical; box-sizing: border-box; font-size: 13px; line-height: 1.6; outline: none; min-height: 150px; max-height: calc(100vh - 250px); display: block;"></textarea>
+          <div id="summaryPreviewArea" class="markdown-body hidden"
+            style="width: 100%; height: 320px; overflow-y: auto; border-radius: 0 0 var(--radius-md) var(--radius-md); border: 1px solid var(--border); border-top: none; background: var(--bg-tertiary); color: var(--text-primary); padding: 12px; box-sizing: border-box; font-size: 13px; line-height: 1.6; min-height: 150px; max-height: calc(100vh - 250px);">
+          </div>
         </div>
       </div>
     </section>
