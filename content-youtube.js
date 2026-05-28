@@ -43,7 +43,7 @@
 
     layoutObserver = new MutationObserver((mutations) => {
       if (!ytSidebarBreakpointEnabled) return;
-      
+
       for (const m of mutations) {
         if (m.attributeName === 'is-two-columns_') {
           // YouTube側が属性を書き換えたら、こちらの設定値で上書き強制する
@@ -61,7 +61,7 @@
   // ブレークポイントに基づいて属性を切り替える
   function applyYtSidebarBreakpoint(isFromObserver = false) {
     if (isApplying) return; // ロック中は無視
-    
+
     const flexy = document.querySelector('ytd-watch-flexy') || document.querySelector('ytd-watch-grid');
     if (!flexy) return;
 
@@ -72,43 +72,43 @@
     }
 
     const width = window.innerWidth;
-    
+
     // トグルがOFFの場合は、YouTube本来のデフォルト（約1000px）に従う
     // トグルがONの場合は、常に1カラム（false）にする
     const shouldBeTwoColumns = ytSidebarBreakpointEnabled ? false : (width >= 1000);
 
     const hasAttr = flexy.hasAttribute('is-two-columns_');
-    
+
     if (shouldBeTwoColumns !== hasAttr) {
       isApplying = true; // ロック開始
-      
+
       // YouTubeの内部処理（Polymerの描画サイクル等）が落ち着くまで少し待つ
       // 待つことで「動画が真っ暗になる」非同期タイミングバグを回避する
       setTimeout(() => {
         // 監視を一時停止
         if (layoutObserver) layoutObserver.disconnect();
-        
+
         if (shouldBeTwoColumns) {
           flexy.setAttribute('is-two-columns_', '');
         } else {
           flexy.removeAttribute('is-two-columns_');
         }
-        
+
         // 監視を再開
         if (layoutObserver) {
           layoutObserver.observe(flexy, { attributes: true, attributeFilter: ['is-two-columns_'] });
         }
-        
+
         // 属性変更後、YouTube純正のサイズ計算を走らせるためにリサイズイベントを発火
         // （YouTubeの計算が終わった後なので安全に再計算される）
         window.dispatchEvent(new Event('resize'));
-        
+
         // リサイズ発火後、YouTubeが再度属性を戻そうとする可能性があるので、
         // しばらくの間は再帰的な処理（無限ループ）をロックする
         setTimeout(() => {
           isApplying = false; // ロック解除
         }, 500);
-        
+
       }, 100); // 100msのディレイ
     } else if (!ytSidebarBreakpointEnabled) {
       // トグルOFFで属性が既に一致している場合、念のため監視だけ外す
@@ -225,6 +225,9 @@
   let originalVideoParent = null; // video要素の元の親
   let originalVideoNextSibling = null; // video要素の元の次兄弟
   let videoElement = null; // 移動対象のvideo要素
+  let playPausePlayHandler = null;
+  let playPausePauseHandler = null;
+  let progressUpdateHandler = null;
 
   // サイズ定義マップ（width, height）
   const MINI_PLAYER_SIZES = {
@@ -258,11 +261,6 @@
                     width 0.3s ease, height 0.3s ease;
         transform: translateY(0);
         opacity: 1;
-        resize: both;
-        min-width: 260px;
-        min-height: 146px;
-        max-width: 800px;
-        max-height: 450px;
       }
       #yt-ext-floating-player video {
         position: absolute !important;
@@ -329,6 +327,11 @@
         right: 8px;
         font-size: 18px;
       }
+      .yt-ext-fp-resize {
+        top: 8px;
+        right: 48px;
+        font-size: 14px;
+      }
       .yt-ext-fp-back {
         top: 8px;
         left: 8px;
@@ -346,6 +349,70 @@
       .yt-ext-fp-play-pause svg {
         width: 30px;
         height: 30px;
+      }
+      /* カスタムツールチップ */
+      .yt-ext-fp-btn::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        top: 38px;
+        left: 50%;
+        transform: translateX(-50%) scale(0.9);
+        background: rgba(0, 0, 0, 0.85);
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-family: sans-serif;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.15s ease, transform 0.15s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        z-index: 2147483647;
+      }
+      .yt-ext-fp-btn:hover::after {
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+      }
+      /* 再生プログレスバー */
+      .yt-ext-fp-progress-container {
+        position: absolute;
+        bottom: 8px;
+        left: 12px;
+        width: calc(100% - 24px);
+        height: 6px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 3px;
+        cursor: pointer;
+        transition: height 0.15s ease, bottom 0.15s ease;
+        z-index: 2147483647;
+      }
+      #yt-ext-floating-player:hover .yt-ext-fp-progress-container {
+        height: 10px;
+        bottom: 6px;
+      }
+      .yt-ext-fp-progress-bar {
+        height: 100%;
+        width: 0%;
+        background: #ff0000;
+        border-radius: 3px;
+        position: relative;
+      }
+      /* ホバー時のつまみ */
+      .yt-ext-fp-progress-bar::after {
+        content: '';
+        position: absolute;
+        right: -6px;
+        top: 50%;
+        transform: translateY(-50%) scale(0);
+        width: 12px;
+        height: 12px;
+        background: #ff0000;
+        border-radius: 50%;
+        transition: transform 0.15s ease;
+      }
+      #yt-ext-floating-player:hover .yt-ext-fp-progress-bar::after {
+        transform: translateY(-50%) scale(1);
       }
     `;
     document.head.appendChild(style);
@@ -498,18 +565,32 @@
     const closeBtn = document.createElement('button');
     closeBtn.className = 'yt-ext-fp-btn yt-ext-fp-close';
     closeBtn.innerHTML = '✕';
-    closeBtn.title = 'ミニプレイヤーを閉じる';
+    closeBtn.setAttribute('data-tooltip', '閉じる');
     closeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       miniPlayerDismissed = true; // プレイヤー位置に戻るまで再表示しない
       deactivateMiniPlayer();
     });
 
+    // サイズ変更ボタン
+    const resizeBtn = document.createElement('button');
+    resizeBtn.className = 'yt-ext-fp-btn yt-ext-fp-resize';
+    resizeBtn.innerHTML = '📐';
+    resizeBtn.setAttribute('data-tooltip', 'サイズ変更');
+    resizeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const sizes = ['small', 'medium', 'large', 'xlarge'];
+      const currentIndex = sizes.indexOf(miniPlayerSize);
+      const nextIndex = (currentIndex + 1) % sizes.length;
+      const nextSize = sizes[nextIndex];
+      chrome.storage.local.set({ miniPlayerSize: nextSize });
+    });
+
     // 元位置に戻るボタン
     const backBtn = document.createElement('button');
     backBtn.className = 'yt-ext-fp-btn yt-ext-fp-back';
     backBtn.innerHTML = '↑';
-    backBtn.title = 'プレイヤーの位置に戻る';
+    backBtn.setAttribute('data-tooltip', '上に戻る');
     backBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       deactivateMiniPlayer();
@@ -525,7 +606,7 @@
     // 再生/停止ボタン
     const playPauseBtn = document.createElement('button');
     playPauseBtn.className = 'yt-ext-fp-btn yt-ext-fp-play-pause';
-    playPauseBtn.title = '再生/停止';
+    playPauseBtn.setAttribute('data-tooltip', '再生/一時停止');
 
     const updatePlayPauseIcon = () => {
       if (video.paused) {
@@ -546,15 +627,68 @@
       }
     });
 
+    // 再生バー (Progress Bar)
+    const progressContainer = document.createElement('div');
+    progressContainer.className = 'yt-ext-fp-progress-container';
+    progressContainer.setAttribute('data-tooltip', 'シーク');
+
+    const progressBar = document.createElement('div');
+    progressBar.className = 'yt-ext-fp-progress-bar';
+    progressContainer.appendChild(progressBar);
+
+    // timeupdate イベントで進捗を更新
+    progressUpdateHandler = () => {
+      if (video.duration) {
+        const pct = (video.currentTime / video.duration) * 100;
+        progressBar.style.width = `${pct}%`;
+      }
+    };
+    video.addEventListener('timeupdate', progressUpdateHandler);
+
+    // クリック・ドラッグでシークするロジック
+    const setProgress = (e) => {
+      const rect = progressContainer.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const width = rect.width;
+      const pct = Math.max(0, Math.min(1, clickX / width));
+      if (video.duration) {
+        video.currentTime = pct * video.duration;
+      }
+    };
+
+    let isDragging = false;
+    const onMouseMove = (e) => {
+      if (isDragging) {
+        setProgress(e);
+      }
+    };
+    const onMouseUp = () => {
+      isDragging = false;
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    progressContainer.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      isDragging = true;
+      setProgress(e);
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    });
+
     // ビデオの状態変化を監視
-    video.addEventListener('play', updatePlayPauseIcon);
-    video.addEventListener('pause', updatePlayPauseIcon);
+    playPausePlayHandler = updatePlayPauseIcon;
+    playPausePauseHandler = updatePlayPauseIcon;
+    video.addEventListener('play', playPausePlayHandler);
+    video.addEventListener('pause', playPausePauseHandler);
 
     // video要素をフローティングコンテナに移動
     floatingContainer.appendChild(video);
     floatingContainer.appendChild(closeBtn);
+    floatingContainer.appendChild(resizeBtn);
     floatingContainer.appendChild(backBtn);
     floatingContainer.appendChild(playPauseBtn);
+    floatingContainer.appendChild(progressContainer);
     document.body.appendChild(floatingContainer);
 
     // サイズを適用
@@ -577,6 +711,10 @@
 
     // video要素を元の親に戻す
     if (videoElement && originalVideoParent) {
+      if (playPausePlayHandler) videoElement.removeEventListener('play', playPausePlayHandler);
+      if (playPausePauseHandler) videoElement.removeEventListener('pause', playPausePauseHandler);
+      if (progressUpdateHandler) videoElement.removeEventListener('timeupdate', progressUpdateHandler);
+
       if (originalVideoNextSibling && originalVideoNextSibling.parentNode === originalVideoParent) {
         originalVideoParent.insertBefore(videoElement, originalVideoNextSibling);
       } else {

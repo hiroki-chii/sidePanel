@@ -1304,6 +1304,23 @@ function loadToolsSettings() {
       });
     }
   });
+
+  // ストレージ変更を監視し、設定UIにリアルタイム反映する（ミニプレイヤーからのサイズ変更対応）
+  chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace !== 'local') return;
+
+    if (changes.miniPlayerSize !== undefined) {
+      const el = document.getElementById('miniPlayerSize');
+      if (el) el.value = changes.miniPlayerSize.newValue || 'medium';
+    }
+
+    if (changes.miniPlayerEnabled !== undefined) {
+      const toggle = document.getElementById('toggleMiniPlayer');
+      const el = document.getElementById('miniPlayerSize');
+      if (toggle) toggle.checked = changes.miniPlayerEnabled.newValue;
+      if (el) el.disabled = !changes.miniPlayerEnabled.newValue;
+    }
+  });
 }
 
 function setupFeatures() {
