@@ -414,6 +414,23 @@
       #yt-ext-floating-player:hover .yt-ext-fp-progress-bar::after {
         transform: translateY(-50%) scale(1);
       }
+      /* 再生時間表示 */
+      .yt-ext-fp-time {
+        position: absolute;
+        bottom: 22px;
+        left: 12px;
+        color: #fff;
+        font-family: 'Roboto', Arial, sans-serif;
+        font-size: 18px;
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+        z-index: 2147483647;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+      #yt-ext-floating-player:hover .yt-ext-fp-time {
+        opacity: 1;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -544,6 +561,20 @@
     intersectionObserver.observe(sentinelElement);
   }
 
+  // 秒数を「分:秒」または「時間:分:秒」の形式にフォーマットする
+  function formatTime(seconds) {
+    if (isNaN(seconds) || !isFinite(seconds) || seconds < 0) return '0:00';
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    
+    if (hrs > 0) {
+      return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    } else {
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+  }
+
   // ミニプレイヤーを起動（video要素を独立フローティングコンテナに移動）
   function activateMiniPlayer() {
     if (miniPlayerActive) return;
@@ -627,6 +658,11 @@
       }
     });
 
+    // 再生時間表示用の要素を追加
+    const timeDisplay = document.createElement('div');
+    timeDisplay.className = 'yt-ext-fp-time';
+    timeDisplay.textContent = '0:00 / 0:00';
+
     // 再生バー (Progress Bar)
     const progressContainer = document.createElement('div');
     progressContainer.className = 'yt-ext-fp-progress-container';
@@ -636,14 +672,21 @@
     progressBar.className = 'yt-ext-fp-progress-bar';
     progressContainer.appendChild(progressBar);
 
-    // timeupdate イベントで進捗を更新
+    // timeupdate イベントで進捗と再生時間を更新
     progressUpdateHandler = () => {
-      if (video.duration) {
+      const current = formatTime(video.currentTime);
+      if (video.duration && isFinite(video.duration)) {
         const pct = (video.currentTime / video.duration) * 100;
         progressBar.style.width = `${pct}%`;
+        timeDisplay.textContent = `${current} / ${formatTime(video.duration)}`;
+      } else {
+        progressBar.style.width = '0%';
+        timeDisplay.textContent = `${current} / LIVE`;
       }
     };
     video.addEventListener('timeupdate', progressUpdateHandler);
+    // 初期表示用に一度更新を実行
+    progressUpdateHandler();
 
     // クリック・ドラッグでシークするロジック
     const setProgress = (e) => {
@@ -689,6 +732,7 @@
     floatingContainer.appendChild(backBtn);
     floatingContainer.appendChild(playPauseBtn);
     floatingContainer.appendChild(progressContainer);
+    floatingContainer.appendChild(timeDisplay);
     document.body.appendChild(floatingContainer);
 
     // サイズを適用
