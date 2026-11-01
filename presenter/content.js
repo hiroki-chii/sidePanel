@@ -5,24 +5,40 @@
   const C = PresenterCore;
   let config = C.normalize(), disposed = false;
   const isTop = window === window.top;
-  const FRAME_TAG = 'presenter-cursor:frame-input:v1';
-  const allowedFrameTypes = new Set(['move', 'down']);
-
-  // Translate pointer coordinates at each iframe boundary, including nested frames.
-  function relay(event) { window.parent.postMessage({ tag: FRAME_TAG, event }, '*'); }
-  window.addEventListener('message', event => {
-    if (event.data?.tag !== FRAME_TAG || !allowedFrameTypes.has(event.data.event?.kind)) return;
-    const frame = [...document.querySelectorAll('iframe,frame')].find(node => node.contentWindow === event.source);
-    if (!frame) return;
-    const input = { ...event.data.event };
-    {
-      if (!Number.isFinite(input.x) || !Number.isFinite(input.y)) return;
-      const rect = frame.getBoundingClientRect();
-      const sx = frame.offsetWidth ? rect.width / frame.offsetWidth : 1;
-      const sy = frame.offsetHeight ? rect.height / frame.offsetHeight : 1;
-      input.x = rect.left + (frame.clientLeft + input.x) * sx;
-      input.y = rect.top + (frame.clientTop + input.y) * sy;
+  // The panel can distinguish a loaded document from Chrome's blocked-frame error page.
+  const extensionOrigin = chrome.runtime.getURL('').replace(/\/$/, '');
+  if (!isTop && location.ancestorOrigins[0] === extensionOrigin) {
+    window.parent.postMessage('sidepanel:web-frame-ready', extensionOrigin);
+  }
+  // WindowProxy indices identify the embedding element without reading a foreign DOM.
+  function relay(input) {
+    const path = [];
+    for (let frame = window; frame !== frame.top; frame = frame.parent) {
+      const parent = frame.parent;
+      let index = 0;
+      while (index < parent.length && parent[index] !== frame) index++;
+      if (index === parent.length || path.length === 32) return;
+      path.unshift(index);
     }
+    chrome.runtime.sendMessage({ type: 'PC_FRAME_POINTER', path, ...input }).catch(() => {});
+  }
+
+  chrome.runtime.onMessage.addListener(message => {
+    if (message.type !== 'PC_FRAME_POINTER' || !config.enabled) return;
+    const { path, kind, button } = message;
+    let parent = window.top;
+    for (const index of path.slice(0, -1)) {
+      parent = parent[index];
+      if (!parent) return;
+    }
+    if (parent !== window) return;
+    const child = window[path.at(-1)];
+    const frame = [...document.querySelectorAll('iframe,frame')].find(node => node.contentWindow === child);
+    if (!frame) return;
+    const rect = frame.getBoundingClientRect();
+    const sx = frame.offsetWidth ? rect.width / frame.offsetWidth : 1;
+    const sy = frame.offsetHeight ? rect.height / frame.offsetHeight : 1;
+    const input = { kind, button, x: rect.left + (frame.clientLeft + message.x) * sx, y: rect.top + (frame.clientTop + message.y) * sy };
     if (isTop) acceptFrame(input); else relay(input);
   });
   if (!isTop) {
@@ -38,8 +54,6 @@
       if (!config.enabled || !event.isTrusted) return;
       const action = shortcutAction(event);
       if (config.enabled && action) { event.preventDefault(); event.stopImmediatePropagation(); }
-      // Page-writable postMessage is used only for visual pointer coordinates.
-      // Keyboard actions require a trusted event and an extension-only channel.
       chrome.runtime.sendMessage({ type: 'PC_FRAME_KEY', action: config.enabled ? action : null, escape: event.key === 'Escape', label: keyLabel(event) }).catch(() => {});
     }, true);
     chrome.storage.local.get('config').then(result => { config = C.normalize(result.config); });

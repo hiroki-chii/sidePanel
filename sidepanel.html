@@ -233,26 +233,13 @@
 
       <div class="setting-item">
         <div class="setting-info">
-          <div class="setting-title">マウスホイール文字入力</div>
-          <div class="setting-desc">ホイール文字変更、中クリックで漢字変換表示</div>
+          <label for="externalSearchSuggestions" class="setting-title">Google の検索候補</label>
+          <div class="setting-desc">オンにすると、空白で区切った複数の検索語を入力中に Google へ送信します。URL は対象外です。</div>
         </div>
         <label class="toggle-switch">
-          <input type="checkbox" id="toggleWheelSelect">
+          <input type="checkbox" id="externalSearchSuggestions">
           <span class="toggle-slider"></span>
         </label>
-      </div>
-
-      <div class="setting-item">
-        <div class="setting-info">
-          <div class="setting-title">クリック要素の採番 (Alt+Shift+L)</div>
-          <div class="setting-desc">ページ内の番号を選択して実行します</div>
-        </div>
-        <div class="setting-controls">
-          <label class="toggle-switch">
-            <input type="checkbox" id="toggleNumberingEnabled">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
       </div>
 
     </section>
@@ -396,7 +383,6 @@
 
   <script src="marked.min.js"></script>
   <script src="sidepanel.js"></script>
-  <script src="content-wheel-select.js"></script>
 </body>
 
 </html>

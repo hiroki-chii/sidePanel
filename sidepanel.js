@@ -82,7 +82,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadToolsSettings();
   setupFeatures();
   setupSummaryTool();
-  setupNumberingMode();
   setupCustomModal();
   setupTheme();
   setupWebView();
@@ -421,12 +420,34 @@ function setupAddressBar() {
   dom.addressInput.addEventListener('blur', () => setTimeout(() => dom.addressSuggestions.classList.add('hidden'), 200));
 }
 
+function canSendSearchQuery(query) {
+  // A single word may be an intranet host. Only send unambiguous search phrases.
+  return /^[\p{L}\p{M}\p{N}]+(?: +[\p{L}\p{M}\p{N}]+)+$/u.test(query);
+}
+
 function setupAddressSuggestions() {
   if (!dom.addressInput || !dom.addressSuggestions) return;
 
   let selectedIndex = -1;
   let currentSuggestions = [];
   let debounceTimeout = null;
+  let pending = null;
+  const externalToggle = document.getElementById('externalSearchSuggestions');
+
+  function cancelSuggestions() {
+    clearTimeout(debounceTimeout);
+    pending?.abort();
+    currentSuggestions = [];
+    selectedIndex = -1;
+    dom.addressSuggestions.classList.add('hidden');
+  }
+  externalToggle.addEventListener('change', cancelSuggestions);
+  chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && changes.externalSearchSuggestions) {
+      externalToggle.checked = changes.externalSearchSuggestions.newValue === true;
+      cancelSuggestions();
+    }
+  });
 
   const updateSelection = () => {
     const items = dom.addressSuggestions.querySelectorAll('.suggestion-item');
@@ -437,32 +458,34 @@ function setupAddressSuggestions() {
   };
 
   dom.addressInput.addEventListener('input', () => {
+    cancelSuggestions();
     const query = dom.addressInput.value.trim();
-    if (query.length < 1) {
-      dom.addressSuggestions.classList.add('hidden');
-      return;
-    }
+    if (!query) return;
     const queryLower = query.toLowerCase();
 
-    clearTimeout(debounceTimeout);
+    pending = new AbortController();
+    const { signal } = pending;
     debounceTimeout = setTimeout(async () => {
       // 1. Google検索サジェストをフェッチ
       let searchSuggestions = [];
-      try {
-        const response = await fetch(`https://suggestqueries.google.com/complete/search?client=chrome&q=${encodeURIComponent(query)}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data && Array.isArray(data[1])) {
-            searchSuggestions = data[1].slice(0, 5).map(keyword => ({
-              type: 'search',
-              title: keyword,
-              url: `https://www.google.com/search?q=${encodeURIComponent(keyword)}`
-            }));
+      if (externalToggle.checked && canSendSearchQuery(query)) {
+        try {
+          const response = await fetch(`https://suggestqueries.google.com/complete/search?client=chrome&q=${encodeURIComponent(query)}`, { signal, credentials: 'omit', referrerPolicy: 'no-referrer' });
+          if (response.ok) {
+            const data = await response.json();
+            if (Array.isArray(data?.[1])) {
+              searchSuggestions = data[1].filter(keyword => typeof keyword === 'string').slice(0, 5).map(keyword => ({
+                type: 'search',
+                title: keyword,
+                url: `https://www.google.com/search?q=${encodeURIComponent(keyword)}`
+              }));
+            }
           }
+        } catch {
+          // Local matches remain available when the suggestion service is offline.
         }
-      } catch (e) {
-        console.error('Google Suggest API Error:', e);
       }
+      if (signal.aborted) return;
 
       // 2. タブ、履歴、ブックマークから候補を取得
       const [tabs, history, bookmarks] = await Promise.all([
@@ -474,6 +497,7 @@ function setupAddressSuggestions() {
       const seenUrls = new Set();
       // 現在のタブは除外
       const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (signal.aborted) return;
       if (activeTab) seenUrls.add(activeTab.url);
 
       const match = (text) => text?.toLowerCase().includes(queryLower);
@@ -1269,9 +1293,8 @@ function loadToolsSettings() {
     { id: 'miniPlayerSize', key: 'miniPlayerSize', default: 'small' },
     { id: 'caretModePosition', key: 'caretModePosition', default: 'off' },
     { id: 'caretModeDelay', key: 'caretModeDelay', default: 700 },
-    { id: 'toggleNumberingEnabled', key: 'numberingEnabled', default: false },
-    { id: 'toggleYtSidebarBreakpoint', key: 'ytSidebarBreakpointEnabled', default: false },
-    { id: 'toggleWheelSelect', key: 'wheelSelectEnabled', default: false }
+    { id: 'externalSearchSuggestions', key: 'externalSearchSuggestions', default: false },
+    { id: 'toggleYtSidebarBreakpoint', key: 'ytSidebarBreakpointEnabled', default: false }
   ];
 
   const sizeSelect = document.getElementById('miniPlayerSize');
@@ -1352,49 +1375,9 @@ function setupFeatures() {
       "・YouTubeサイドバー配置：右サイドバーを常に動画下に固定表示",
       "・Gemini Canvas拡張：プレビューの全画面表示",
       "・ページテキスト取得：Markdown/HTML形式での抽出とコピー",
-      "・クリック要素の採番：キーボード操作による要素選択と実行",
-      "・入力モード表示：直前の入力から推定したモードをキャレットの上下左右に表示",
-      "・マウスホイール文字入力：ホバーしてホイール文字入力、中クリックで漢字変換表示"
+      "・入力モード表示：直前の入力から推定したモードをキャレットの上下左右に表示"
     ];
     showAlert(list.join("\n\n"), "機能一覧");
-  });
-}
-
-// ===========================
-// クリック要素採番ツール
-// ===========================
-
-function setupNumberingMode() {
-  const toggleNumberingEnabled = document.getElementById('toggleNumberingEnabled');
-  if (!toggleNumberingEnabled) return;
-
-  // マスタースイッチ変更時の連動
-  toggleNumberingEnabled.addEventListener('change', () => {
-    if (!toggleNumberingEnabled.checked) {
-      chrome.storage.local.set({ isNumberingMode: false });
-    }
-  });
-
-  chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace === 'local' && changes.isNumberingMode !== undefined) {
-      const isModeOn = changes.isNumberingMode.newValue;
-      if (!isModeOn) {
-        // モード解除時にページにフォーカスを戻す
-        chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
-          if (tabs[0]) {
-            chrome.tabs.sendMessage(tabs[0].id, { action: 'focusPage' }).catch(() => {});
-          }
-        });
-      }
-    }
-  });
-
-  // メッセージリスナー
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === 'focusNumberingSelect') {
-      // ショートカット等でモードがONになった時、ツールタブに切り替え
-      switchTab('tools');
-    }
   });
 }
 
@@ -1414,6 +1397,7 @@ function setupSummaryTool() {
 
   document.getElementById('clearSummaryBtn')?.addEventListener('click', () => {
     resultArea.value = '';
+    resultArea.dataset.format = 'md';
     const preview = document.getElementById('summaryPreviewArea');
     if (preview) preview.innerHTML = '';
     if (statusDisplay) statusDisplay.style.display = 'none';
@@ -1447,21 +1431,23 @@ function setupSummaryTool() {
       }
 
       resultArea.value = output;
-      updateMarkdownPreview();
-      await navigator.clipboard.writeText(output);
+      resultArea.dataset.format = format;
       
       // HTML形式の時はプレビュー（表示）タブを非表示にし、編集タブへ切り替える
       const previewTab = document.querySelector('.output-tab[data-group="summary"][data-mode="preview"]');
       const editTab = document.querySelector('.output-tab[data-group="summary"][data-mode="edit"]');
       if (previewTab) {
         if (format === 'html') {
+          document.getElementById('summaryPreviewArea').replaceChildren();
           previewTab.style.display = 'none';
           editTab?.click();
         } else {
           previewTab.style.display = 'inline-block';
+          updateMarkdownPreview();
         }
       }
 
+      await navigator.clipboard.writeText(output);
       showToast(`${format.toUpperCase()}形式で取得・コピー完了`);
       statusDisplay.textContent = '完了';
       statusDisplay.style.color = 'var(--text-primary)';
@@ -1526,13 +1512,56 @@ async function checkSiteAndConfirm(area, status) {
   return !confirmMsg || window.confirm(confirmMsg);
 }
 
-function updateMarkdownPreview() {
-  const md = document.getElementById('summaryResultArea')?.value;
-  const preview = document.getElementById('summaryPreviewArea');
-  if (!md || !preview) return;
+const previewElements = new Set('p br hr h1 h2 h3 h4 h5 h6 blockquote ul ol li strong em del pre code table thead tbody tr th td a'.split(' '));
 
-  if (typeof marked !== 'undefined') preview.innerHTML = marked.parse(md);
-  else preview.innerText = md;
+function appendPreviewContent(parent, nodes) {
+  for (const node of nodes) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      parent.append(node.data);
+      continue;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) continue;
+    const tag = node.localName;
+    if (['script', 'style', 'iframe', 'object', 'embed', 'svg', 'math', 'template', 'noscript'].includes(tag)) continue;
+    if (tag === 'img') {
+      parent.append(node.getAttribute('alt') || '');
+      continue;
+    }
+    if (!previewElements.has(tag)) {
+      appendPreviewContent(parent, node.childNodes);
+      continue;
+    }
+    const element = document.createElement(tag);
+    if (tag === 'a') {
+      const href = node.getAttribute('href');
+      if (href && URL.canParse(href)) {
+        const url = new URL(href);
+        if (url.protocol === 'https:' || url.protocol === 'http:') {
+          element.href = url.href;
+          element.target = '_blank';
+          element.rel = 'noopener noreferrer';
+        }
+      }
+    }
+    appendPreviewContent(element, node.childNodes);
+    parent.append(element);
+  }
+}
+
+function updateMarkdownPreview() {
+  const area = document.getElementById('summaryResultArea');
+  const preview = document.getElementById('summaryPreviewArea');
+  if (!area || !preview || area.dataset.format === 'html') return;
+  if (typeof marked === 'undefined') {
+    preview.textContent = area.value;
+    return;
+  }
+  // Template contents stay inert. Only newly constructed, allowlisted nodes enter the panel.
+  const template = document.createElement('template');
+  template.innerHTML = marked.parse(area.value);
+  const fragment = document.createDocumentFragment();
+  appendPreviewContent(fragment, template.content.childNodes);
+  preview.replaceChildren(fragment);
 }
 
 function setupOutputTabs() {
@@ -1599,12 +1628,19 @@ function setupWebView() {
   dom.syncTabBtn?.addEventListener('click', () => transferCurrentTabToSidePanel());
   dom.exportTabBtn?.addEventListener('click', () => openIframeInMainWindow('メイン画面でページを開きました'));
 
-  // エラー時のオーバーレイ
-  const overlay = document.getElementById('iframeOverlay');
-  dom.webIframe?.addEventListener('load', () => overlay?.classList.add('hidden'));
-  document.getElementById('openExternalBtn')?.addEventListener('click', () => openIframeInMainWindow());
+  document.getElementById('openExternalBtn')?.addEventListener('click', openOriginalWebTab);
 }
 
+let originalWebTabId = null;
+async function openOriginalWebTab() {
+  const url = getIframeUrl();
+  if (!url) return;
+  const tab = await chrome.tabs.get(originalWebTabId).catch(() => null);
+  if (tab?.url === url) await chrome.tabs.update(tab.id, { active: true });
+  else await chrome.tabs.create({ url });
+}
+
+let webFrameAttempt;
 /**
  * 現在のタブをサイドパネルに転送
  */
@@ -1614,16 +1650,40 @@ async function transferCurrentTabToSidePanel() {
     if (!tab?.url) return;
 
     // セキュリティ制限のあるページは除外
-    if (SYSTEM_PAGE_PATTERN.test(tab.url)) {
+    if (!/^(https?|file):/i.test(tab.url)) {
       showToast('このページはサイドパネルで表示できません');
       return;
     }
 
     if (dom.webIframe) {
-      dom.webIframe.src = tab.url;
-      dom.webIframe.classList.remove('hidden');
+      webFrameAttempt?.abort();
+      webFrameAttempt = new AbortController();
+      const { signal } = webFrameAttempt;
+      const overlay = document.getElementById('iframeOverlay');
+      const frame = dom.webIframe.cloneNode(false);
+      originalWebTabId = tab.id;
+      overlay.classList.add('hidden');
+      let timeout;
+      signal.addEventListener('abort', () => clearTimeout(timeout), { once: true });
+      window.addEventListener('message', event => {
+        if (event.source === frame.contentWindow && event.data === 'sidepanel:web-frame-ready') {
+          webFrameAttempt.abort();
+        }
+      }, { signal });
+      // Chrome fires load even for a refused embed. Only an actual site document can acknowledge it.
+      frame.addEventListener('load', () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          webFrameAttempt.abort();
+          overlay.classList.remove('hidden');
+          showToast('パネルに表示できません。通常のタブでご覧ください');
+        }, 2000);
+      }, { signal });
+      frame.src = tab.url;
+      frame.classList.remove('hidden');
+      dom.webIframe.replaceWith(frame);
+      dom.webIframe = frame;
       dom.webEmpty?.classList.add('hidden');
-      showToast('ページを読み込みました');
     }
   } catch (error) {
     console.error('Transfer error:', error);

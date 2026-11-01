@@ -64,9 +64,26 @@ test('frame keyboard events use a verified tab sender and bounded payloads', asy
   const response = await w.message({ type: 'PC_FRAME_KEY', action: 'unknown', label: 'a'.repeat(1000), escape: true }, { tab: { id: 10 }, frameId: 5 });
   assert.equal(response.ok, true); assert.equal(w.calls[0].message.action, null); assert.equal(w.calls[0].message.label.length, 60); assert.equal(w.calls[0].options.frameId, 0);
 });
-test('presenter ignores the existing numbering command and rejects a stale panel action', async () => {
+test('pointer events stay in the sender tab and carry only validated pointer data', async () => {
   const w = worker();
-  await w.listeners.command('toggle-numbering');
+  const sender = { tab: { id: 10 }, frameId: 2 };
+  const pointer = { type: 'PC_FRAME_POINTER', path: [0], kind: 'move', x: 12, y: 8, action: 'toggleZoom' };
+  for (const invalid of [{ x: Infinity }, { path: [] }, { path: [-1] }, { kind: 'key' }, { kind: 'down', button: -1 }]) {
+    assert.equal((await w.message({ ...pointer, ...invalid }, sender)).ok, false);
+  }
+  assert.equal((await w.message(pointer, { tab: sender.tab, frameId: 0 })).ok, false);
+  assert.equal(w.calls.length, 0);
+  assert.equal((await w.message(pointer, sender)).ok, true);
+  assert.equal(w.calls[0].id, 10);
+  assert.equal(w.calls[0].options.frameId, 0);
+  assert.equal(w.calls[0].message.action, undefined);
+  assert.equal((await w.message({ ...pointer, path: [0, 1], kind: 'down', button: 0 }, sender)).ok, true);
+  assert.equal(w.calls[1].id, 10);
+  assert.equal(w.calls[1].message.button, 0);
+});
+test('presenter ignores unknown commands and rejects a stale panel action', async () => {
+  const w = worker();
+  await w.listeners.command('unknown-command');
   const response = await w.message({ type: 'PC_ACTION', action: 'togglePen', tabId: 11 });
   assert.equal(response.ok, false);
   assert.equal(w.calls.length, 0);

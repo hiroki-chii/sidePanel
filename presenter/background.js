@@ -49,6 +49,20 @@ async function handle(message, sender) {
     if (after?.id !== sender.tab.id) throw new Error('タブが切り替わったため、撮影を中止しました。');
     return { ok: true, image };
   }
+  if (message.type === 'PC_FRAME_POINTER') {
+    const { path, kind, x, y, button } = message;
+    if (!sender.tab || !Number.isInteger(sender.frameId) || sender.frameId <= 0 ||
+        !Array.isArray(path) || !path.length || path.length > 32 ||
+        !path.every(index => Number.isInteger(index) && index >= 0) ||
+        !Number.isFinite(x) || !Number.isFinite(y) ||
+        !(kind === 'move' || (kind === 'down' && Number.isInteger(button) && button >= 0 && button <= 5))) {
+      throw new Error('フレーム入力を確認できません。');
+    }
+    const event = { type: 'PC_FRAME_POINTER', path, kind, x, y, ...(kind === 'down' ? { button } : {}) };
+    // A direct child needs only the top frame. Nested events are translated by the matching parent.
+    await chrome.tabs.sendMessage(sender.tab.id, event, path.length === 1 ? { frameId: 0 } : {});
+    return { ok: true };
+  }
   if (message.type === 'PC_FRAME_KEY') {
     if (!sender.tab || !Number.isInteger(sender.frameId) || sender.frameId <= 0) throw new Error('フレームを確認できません。');
     const event = { type: 'PC_FRAME_KEY', action: Object.hasOwn(labels, message.action) ? message.action : null, escape: message.escape === true, label: typeof message.label === 'string' ? message.label.slice(0, 60) : '' };

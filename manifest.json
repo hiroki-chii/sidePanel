@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tab & Bookmark Panel",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "サイドパネルでタブとブックマークを効率的に管理。",
   "permissions": [
     "sidePanel",
@@ -15,7 +15,6 @@
     "declarativeNetRequest"
   ],
   "host_permissions": [
-    "https://generativelanguage.googleapis.com/*",
     "<all_urls>"
   ],
   "side_panel": {
@@ -84,8 +83,6 @@
         "<all_urls>"
       ],
       "js": [
-        "content-hint.js",
-        "content-wheel-select.js",
         "content-caret-mode.js"
       ],
       "all_frames": true,
@@ -101,13 +98,6 @@
     "undoDrawing": { "description": "手書きを元に戻す" },
     "redoDrawing": { "description": "手書きをやり直す" },
     "clearDrawing": { "description": "手書きを全消去" },
-    "allOff": { "description": "プレゼンカーソルをOFF" },
-    "toggle-numbering": {
-      "suggested_key": {
-        "default": "Alt+Shift+L",
-        "mac": "Command+Shift+L"
-      },
-      "description": "クリック要素の採番モードを切り替える"
-    }
+    "allOff": { "description": "プレゼンカーソルをOFF" }
   }
 }
