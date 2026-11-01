@@ -33,6 +33,8 @@ The Extension accesses the minimum required user data for the following purposes
 - **Page Content (scripting)**: When using the "Page Text Retrieval" feature, text data from the active tab is captured for display and copying. This data is never transmitted externally.
 - **Tabs and Bookmarks**: Accessed for display and management within the Extension panel. This data stays local and is never transmitted externally.
 
+- **Presenter Cursor** processes pointer and shortcut events locally. Zoom captures a still image of the visible tab. Captured images and drawings stay in tab memory, and tool preferences are saved in local browser storage.
+
 ## 2. Data Transmission
 The Extension does not transmit user data to any external servers or third parties. All processing is performed locally within the user's browser.
 

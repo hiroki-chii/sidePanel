@@ -1,3 +1,5 @@
+importScripts('presenter/core.js', 'presenter/background.js');
+
 // サイドパネルをツールバーのアイコンクリックで開く
 chrome.sidePanel
   .setPanelBehavior({ openPanelOnActionClick: true })

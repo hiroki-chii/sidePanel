@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Presenter Cursor</title><link rel="stylesheet" href="ui.css"></head>
+<body class="popup">
+  <header class="popup-header"><div class="brand"><div class="brand-icon" data-icon="cursor"></div><div><div class="eyebrow">Present with clarity</div><h1>Presenter Cursor</h1></div></div><button class="icon-button power" id="power" aria-label="全機能をOFF" aria-pressed="true" data-icon="power"></button></header>
+  <p id="message" class="notice" role="status" hidden></p>
+  <div class="section-heading"><h2>このページのツール</h2><span class="status" id="status">接続中</span></div>
+  <main><div class="tools">
+    <button class="tool" data-action="toggleSpotlight" aria-pressed="false"><span data-icon="spotlight"></span><span class="key">Ctrl + Shift + S</span><span class="tool-title">スポットライト</span></button>
+    <button class="tool" data-action="toggleAreaSpotlight" aria-pressed="false"><span data-icon="area"></span><span class="key">Ctrl + Shift + A</span><span class="tool-title">エリア強調</span></button>
+    <button class="tool" data-action="toggleLaser" aria-pressed="false"><span data-icon="laser"></span><span class="key">Ctrl + Shift + L</span><span class="tool-title">レーザーポインター</span></button>
+    <button class="tool" data-action="togglePen" aria-pressed="false"><span data-icon="pen"></span><span class="key">Ctrl + Shift + P</span><span class="tool-title">手書きペン</span></button>
+    <button class="tool wide" data-action="toggleZoom" aria-pressed="false"><span data-icon="zoom"></span><span class="tool-title">画面をズーム</span><span class="key">Ctrl + Shift + M</span></button>
+  </div>
+  <div class="drawing-actions"><button data-action="undoDrawing" title="手書きを元に戻す">↶ 戻す</button><button data-action="redoDrawing" title="手書きをやり直す">↷ やり直す</button><button data-action="clearDrawing">全消去</button></div>
+  <div class="quick-toggles"><button class="quick-toggle" role="switch" aria-checked="true" data-setting="ripple.enabled"><span>クリックの波紋</span><span class="switch"></span></button><button class="quick-toggle" role="switch" aria-checked="false" data-setting="keycast.enabled"><span>ショートカットの入力表示</span><span class="switch"></span></button><button class="quick-toggle" role="switch" aria-checked="true" data-setting="gesture.enabled"><span>中ボタンのジェスチャー</span><span class="switch"></span></button></div>
+  </main>
+  <footer class="popup-footer"><button id="open-settings" class="settings-link"><span data-icon="settings"></span>詳細設定</button><span class="footer-note">Esc で表示を終了</span></footer>
+  <p class="caption" id="shortcut-note">ショートカット：Ctrl + Shift + 各キー<br>Webページ上で動作します。描画中はページ操作を停止します。</p>
+  <script src="core.js"></script><script src="ui.js"></script><script src="popup.js"></script>
+</body></html>

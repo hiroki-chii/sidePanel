@@ -520,7 +520,8 @@ body {
   display: flex !important;
 }
 
-.content.split-mode #toolsPanel {
+.content.split-mode #toolsPanel,
+.content.split-mode #presenterPanel {
   display: none !important;
 }
 
@@ -620,12 +621,19 @@ body {
 #navTools.active,
 #navWeb.active,
 #navSummary.active,
-#navFullscreen.active {
+#navPresenter.active {
   background: var(--accent-subtle);
   color: var(--accent);
   box-shadow: inset 0 0 0 1px var(--accent-glow);
 }
 
+
+#presenterPanel iframe {
+  display: block;
+  width: 100%;
+  height: calc(100dvh - 60px);
+  border: 0;
+}
 
 #toolsPanel.active {
   display: flex;
@@ -1844,6 +1852,12 @@ input:checked+.toggle-slider:before {
 .setting-select:hover {
   border-color: var(--border-hover);
   background-color: var(--bg-hover);
+}
+
+.setting-number {
+  width: 80px;
+  padding: 4px 8px;
+  background-image: none;
 }
 
 .setting-select:focus {

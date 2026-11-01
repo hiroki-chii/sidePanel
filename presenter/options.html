@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>設定 — Presenter Cursor</title><link rel="stylesheet" href="ui.css"></head>
+<body><div class="settings-page">
+<header class="settings-header"><div class="brand"><div class="brand-icon" data-icon="cursor"></div><div><div class="eyebrow">Presenter Cursor</div><h1>プレゼンを、伝わりやすく。</h1></div></div><div class="header-controls"><span id="status" class="status">使用可能</span><button id="power" class="icon-button power" aria-label="全機能をOFF" aria-pressed="true" data-icon="power"></button></div></header>
+<div class="settings-layout"><aside class="sidebar"><nav aria-label="設定メニュー">
+<button class="nav-item active" data-tab="effects" aria-current="page"><span data-icon="spotlight"></span>ポインターと効果</button>
+<button class="nav-item" data-tab="drawing"><span data-icon="pen"></span>手書きとズーム</button>
+<button class="nav-item" data-tab="controls"><span data-icon="keyboard"></span>キーとジェスチャー</button>
+<button class="nav-item" data-tab="guide"><span data-icon="help"></span>使い方と設定</button>
+</nav><p class="sidebar-note">伝えたいところに、<br>視線を集める。<br><br>設定は自動で保存されます。<br>Version 1.0.2</p></aside>
+<main>
+<div id="settings-message" class="notice error" role="alert" hidden></div>
+<section data-panel="effects"><div class="page-heading"><div class="eyebrow">Pointer & effects</div><h2>大切なポイントを、際立たせる。</h2><p class="subtitle">ポインターの見え方と、クリック時の効果を調整します。</p></div>
+<div class="settings-card"><div class="card-heading"><span data-icon="spotlight"></span><h3>スポットライト</h3></div><p class="card-description">カーソル周辺を明るく、それ以外を暗く表示します。</p><div data-fields="spotlight"></div></div>
+<div class="settings-card"><div class="card-heading"><span data-icon="area"></span><h3>エリアスポットライト</h3></div><p class="card-description">ドラッグで選んだ長方形の範囲を強調します。</p><div data-fields="area"></div></div>
+<div class="settings-card"><div class="card-heading"><span data-icon="laser"></span><h3>レーザーポインター</h3></div><p class="card-description">滑らかな光の軌跡で、視線を誘導します。</p><div data-fields="laser"></div></div>
+<div class="settings-card"><button class="toggle-row" data-setting="ripple.enabled" role="switch" aria-checked="true"><span>クリックの波紋</span><span class="switch"></span></button><p class="card-description">左右のクリックを、色の違うリングで表示します。</p><div data-fields="ripple"></div></div>
+</section>
+<section data-panel="drawing" hidden><div class="page-heading"><div class="eyebrow">Draw & zoom</div><h2>説明に、ひと手間のわかりやすさ。</h2><p class="subtitle">線を引く、囲む、拡大する。ページに合わせて自由に。</p></div>
+<div class="settings-card"><div class="card-heading"><span data-icon="pen"></span><h3>手書きマーカー</h3></div><p class="card-description">ペンをONにしてドラッグで描画。トリガーキーを押している間は、クリックせずに描けます。描画中はページ操作を停止します。</p><div data-fields="pen"></div></div>
+<div class="settings-card"><div class="card-heading"><span data-icon="zoom"></span><h3>画面ズーム</h3></div><p class="card-description">現在のタブの静止画を拡大します。カーソルで位置を移動し、ホイールで倍率を調整できます。Escで終了します。</p><div data-fields="zoom"></div><p class="footer-note">ズームをONにすると、表示中のタブを撮影します。撮影画像は保存・送信しません。画面サイズを変更するとズームを終了します。</p></div>
+<div class="preview-card"><span data-icon="cursor"></span><h3>Webページで試してみましょう</h3><p>通常のWebページを開き、サイドパネルのカーソルアイコンからツールを選択。<br>手書きは最大200画まで保持します。再読み込みで消去されます。</p></div>
+</section>
+<section data-panel="controls" hidden><div class="page-heading"><div class="eyebrow">Keys & gestures</div><h2>話す流れを、止めない操作。</h2><p class="subtitle">ページ内ショートカットと、マウスだけの操作。</p></div>
+<div class="settings-card"><div class="card-heading"><span data-icon="keyboard"></span><h3>ページ内ショートカット</h3></div><p class="card-description">Ctrl + Shift + 各キー。Webページにフォーカスがあるときに使えます。ブラウザ側が優先するキーは「Chromeのショートカット設定」で変更してください。</p><div id="shortcuts"></div><div class="button-row"><button id="chrome-shortcuts">Chromeのショートカット設定を開く ↗</button></div><p class="footer-note">Chrome側の割り当てとページ内の割り当ては別です。プレゼン用の初期割り当てはS・P・Mです。レーザーは必要に応じてChrome側に登録できます。両方を変更する場合は同じキーに合わせてください。Escは、効果と描画モードを終了します。</p></div>
+<div class="settings-card"><button class="toggle-row" data-setting="gesture.enabled" role="switch" aria-checked="true"><span>中ボタンのジェスチャー</span><span class="switch"></span></button><p class="card-description">ホイールの中ボタンを押しながら描いて、離します。Webページ上で操作してください。iframe内からのジェスチャー開始には対応しません。</p><div class="gesture-grid"><span class="gesture-symbol">✓</span><span>V字：手書きペンをON / OFF</span><span class="gesture-symbol">↔</span><span>左右に3回以上振る：手書き全消去</span><span class="gesture-symbol">←</span><span>右から左へスワイプ：元に戻す</span><span class="gesture-symbol">→</span><span>左から右へスワイプ：やり直す</span></div></div>
+<div class="settings-card"><button class="toggle-row" data-setting="keycast.enabled" role="switch" aria-checked="false"><span>ショートカットの入力表示</span><span class="switch"></span></button><p class="card-description">Ctrl・Win・Altを使うキー操作や、矢印などの特殊キーを表示。通常の文字入力、入力欄・パスワード欄・編集中のテキストは表示しません。</p><div data-fields="keycast"></div></div>
+</section>
+<section data-panel="guide" hidden><div class="page-heading"><div class="eyebrow">Make it yours</div><h2>いつものプレゼンに、なじむ設定。</h2><p class="subtitle">使い方、表示テーマ、データの管理。</p></div>
+<div class="settings-card"><div class="card-heading"><span data-icon="palette"></span><h3>表示テーマ</h3></div><label class="inline-field">設定画面のテーマ<select id="theme"><option value="system">システムに合わせる</option><option value="dark">ダーク</option><option value="light">ライト</option></select></label></div>
+<div class="settings-card"><div class="card-heading"><span data-icon="help"></span><h3>はじめに</h3></div><ol class="help-list"><li>サイドパネル上部の「ウェブ表示」の右隣にあるカーソルアイコンを選びます。</li><li>通常のWebページを開き、操作パネルで電源と使いたいツールをONにします。</li><li>ページをクリックして戻り、プレゼンを開始。ペンはドラッグ、エリア強調は範囲選択、ズームはホイールで操作します。</li><li>Escで表示と描画モードを終了。手書きの線は「全消去」で消せます。</li><li>電源ボタンで、クリック波紋とジェスチャーも含めて全機能OFF。手書きも消去されます。再びONにすると、波紋などの設定を復元します。</li></ol></div>
+<div class="settings-card"><h3>動作範囲とプライバシー</h3><ul class="help-list"><li>HTTP / HTTPSのページで利用できます。file URLはChromeの拡張詳細で「ファイルのURLへのアクセス」を許可してください。</li><li>Chromeの設定、新しいタブ、ウェブストア、内蔵PDFビューア、他のアプリ、デスクトップ上には表示できません。OS全体のマルチモニター描画・タスクトレイ常駐には対応しません。</li><li>ページ内の通常のiframeでもポインター効果とキー表示を中継します。特殊な埋め込みや変形には制限があります。動画要素自体の全画面表示には対応しません。</li><li>ズームは静止画です。表示中のページ操作は停止し、動画やスクロールは追従しません。権限エラー時は対象サイトへのアクセス許可を確認してください。</li><li>設定はこの端末のChromeにだけ保存。手書きと撮影画像はタブのメモリだけに保持し、外部通信・解析・入力履歴の保存は行いません。</li></ul><p class="footer-note">機能の参照元：<a href="https://github.com/hiroki-chii/cursorExtension" target="_blank" rel="noreferrer">hiroki-chii/cursorExtension</a>。Chrome向けに独立して実装しています。</p></div>
+<div class="settings-card"><h3>設定をリセット</h3><p class="subtitle">色、サイズ、ショートカット、テーマを初期値に戻します。</p><div class="button-row"><button id="reset">初期設定に戻す</button></div><div id="reset-confirm" class="reset-confirm" hidden><p>すべての設定を初期値に戻し、各タブの効果と手書きを消去します。</p><div class="button-row"><button id="reset-apply" class="primary">リセットする</button><button id="reset-cancel">キャンセル</button></div></div></div>
+</section>
+<footer class="settings-footer"><span class="footer-note">ローカル保存 · 外部通信なし</span><span id="save-status" role="status">設定は自動保存されます</span></footer>
+</main></div></div><script src="core.js"></script><script src="ui.js"></script><script src="options.js"></script></body></html>

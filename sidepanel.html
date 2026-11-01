@@ -62,6 +62,11 @@
           <path d="M2 12h20" />
         </svg>
       </button>
+      <button id="navPresenter" class="nav-btn" title="プレゼンカーソル" aria-label="プレゼンカーソル" aria-controls="presenterPanel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
+          <path d="m4 3 6 17 3-7 7-3z" />
+        </svg>
+      </button>
 
       <div class="nav-divider"></div>
 
@@ -81,11 +86,6 @@
           <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
           <line x1="8" y1="21" x2="16" y2="21" />
           <line x1="12" y1="17" x2="12" y2="21" />
-        </svg>
-      </button>
-      <button id="navFullscreen" class="nav-btn" title="全画面切替">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
         </svg>
       </button>
     </div>
@@ -208,6 +208,31 @@
 
       <div class="setting-item">
         <div class="setting-info">
+          <label for="caretModePosition" class="setting-title">入力モードの表示位置</label>
+          <div class="setting-desc">直前の入力から推定した「あ」「A」などをキャレットのそばに表示します</div>
+        </div>
+        <select id="caretModePosition" class="setting-select">
+          <option value="off">表示しない</option>
+          <option value="top">上</option>
+          <option value="bottom">下</option>
+          <option value="left">左</option>
+          <option value="right">右</option>
+        </select>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <label for="caretModeDelay" class="setting-title">入力モードの表示待機時間</label>
+          <div class="setting-desc">入力停止から表示まで（100〜5000ミリ秒）</div>
+        </div>
+        <div class="setting-controls">
+          <input id="caretModeDelay" class="setting-select setting-number" type="number" min="100" max="5000" step="100" value="700" required disabled>
+          <span>ms</span>
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
           <div class="setting-title">マウスホイール文字入力</div>
           <div class="setting-desc">ホイール文字変更、中クリックで漢字変換表示</div>
         </div>
@@ -231,6 +256,8 @@
       </div>
 
     </section>
+
+    <section id="presenterPanel" class="panel" aria-label="プレゼンカーソル"></section>
 
     <!-- ウェブ表示パネル -->
     <section id="webPanel" class="panel">

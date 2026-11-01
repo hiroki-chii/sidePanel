@@ -17,7 +17,7 @@ const _sidePanelPort = chrome.runtime.connect({ name: 'sidepanel' });
 const SYSTEM_PAGE_PATTERN = /^(chrome|edge|about|chrome-extension):/i;
 
 const state = {
-  activeTab: 'tabs', // 'tabs' | 'bookmarks' | 'tools' | 'web' | 'summary'
+  activeTab: 'tabs', // 'tabs' | 'bookmarks' | 'tools' | 'web' | 'summary' | 'presenter'
   tabs: [],
   bookmarks: [],
   openFolderIds: new Set(), // ユーザーが展開したブックマークフォルダのID
@@ -53,6 +53,8 @@ const dom = {
   newFolderBtn: document.getElementById('newFolderBtn'),
   addressBarContainer: document.getElementById('addressBarContainer'),
   navWeb: document.getElementById('navWeb'),
+  navPresenter: document.getElementById('navPresenter'),
+  presenterPanel: document.getElementById('presenterPanel'),
   webPanel: document.getElementById('webPanel'),
   webIframe: document.getElementById('webIframe'),
   webEmpty: document.getElementById('webEmpty'),
@@ -92,7 +94,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // 初期表示の調整
   switchTab(state.activeTab);
-  updateFullscreenHighlight();
 });
 
 // ===========================
@@ -237,19 +238,7 @@ function setupNavigation() {
   dom.navForward?.addEventListener('click', () => navigate('forward'));
   document.getElementById('navReload')?.addEventListener('click', () => navigate('reload'));
 
-  // 全画面モードのトグル
-  let previousWindowState = 'maximized';
-  document.getElementById('navFullscreen')?.addEventListener('click', async () => {
-    const win = await chrome.windows.getCurrent();
-    if (win.state === 'fullscreen') {
-      await chrome.windows.update(win.id, { state: previousWindowState });
-    } else {
-      previousWindowState = win.state;
-      await chrome.windows.update(win.id, { state: 'fullscreen' });
-    }
-    updateFullscreenHighlight();
-  });
-
+  dom.navPresenter.addEventListener('click', () => switchTab('presenter'));
   dom.navTools?.addEventListener('click', () => switchTab('tools'));
   dom.navMain?.addEventListener('click', () => switchTab('tabs'));
   dom.navSummary?.addEventListener('click', () => switchTab('summary'));
@@ -285,13 +274,6 @@ async function updateNavButtonsStatus() {
   } catch (error) {
     dom.navBack.disabled = dom.navForward.disabled = true;
   }
-}
-
-async function updateFullscreenHighlight() {
-  const btn = document.getElementById('navFullscreen');
-  if (!btn) return;
-  const win = await chrome.windows.getCurrent();
-  btn.classList.toggle('active', win.state === 'fullscreen');
 }
 
 // ===========================
@@ -361,8 +343,7 @@ function applyTheme() {
 
 function switchTab(tab) {
   state.activeTab = tab;
-  // ツールタブ、ウェブタブ、テキスト取得タブ以外は「タブ＋ブックマーク」の分割表示を維持
-  state.isSplitView = (tab !== 'tools' && tab !== 'web' && tab !== 'summary');
+  state.isSplitView = !['tools', 'web', 'summary', 'presenter'].includes(tab);
 
   applySplitView();
 
@@ -370,6 +351,7 @@ function switchTab(tab) {
   dom.navMain?.classList.toggle('active', state.isSplitView);
   dom.navTools?.classList.toggle('active', tab === 'tools');
   dom.navWeb?.classList.toggle('active', tab === 'web');
+  dom.navPresenter.classList.toggle('active', tab === 'presenter');
   dom.navSummary?.classList.toggle('active', tab === 'summary');
 
   // パネルの表示制御
@@ -378,10 +360,18 @@ function switchTab(tab) {
   dom.toolsPanel?.classList.toggle('active', tab === 'tools');
   dom.webPanel?.classList.toggle('active', tab === 'web');
   dom.summaryPanel?.classList.toggle('active', tab === 'summary');
+  dom.presenterPanel.classList.toggle('active', tab === 'presenter');
+  if (tab === 'presenter' && !dom.presenterPanel.firstElementChild) {
+    const frame = document.createElement('iframe');
+    frame.title = 'プレゼンカーソルの操作';
+    frame.src = 'presenter/popup.html';
+    dom.presenterPanel.append(frame);
+  } else if (tab !== 'presenter') {
+    dom.presenterPanel.replaceChildren();
+  }
 
-  // アドレスバーの表示制御 (ツールタブ、テキスト取得タブ、ウェブ表示タブ以外は表示)
   if (dom.addressBarContainer) {
-    dom.addressBarContainer.style.display = (tab === 'tools' || tab === 'summary' || tab === 'web') ? 'none' : 'flex';
+    dom.addressBarContainer.style.display = state.isSplitView ? 'flex' : 'none';
   }
 
   saveAppState();
@@ -670,7 +660,6 @@ function setupTabListeners() {
     updateNavButtonsStatus();
   });
 
-  chrome.windows.onBoundsChanged.addListener(updateFullscreenHighlight);
 }
 
 function renderTabs() {
@@ -1278,12 +1267,20 @@ function loadToolsSettings() {
     { id: 'toggleAiEnterGuard', key: 'aiEnterGuard', default: true },
     { id: 'toggleMiniPlayer', key: 'miniPlayerEnabled', default: true },
     { id: 'miniPlayerSize', key: 'miniPlayerSize', default: 'small' },
+    { id: 'caretModePosition', key: 'caretModePosition', default: 'off' },
+    { id: 'caretModeDelay', key: 'caretModeDelay', default: 700 },
     { id: 'toggleNumberingEnabled', key: 'numberingEnabled', default: false },
     { id: 'toggleYtSidebarBreakpoint', key: 'ytSidebarBreakpointEnabled', default: false },
     { id: 'toggleWheelSelect', key: 'wheelSelectEnabled', default: false }
   ];
 
   const sizeSelect = document.getElementById('miniPlayerSize');
+  const caretPositionSelect = document.getElementById('caretModePosition');
+  const caretDelayInput = document.getElementById('caretModeDelay');
+  const updateCaretDelayState = () => {
+    caretDelayInput.disabled = caretPositionSelect.value === 'off';
+  };
+  caretPositionSelect.addEventListener('change', updateCaretDelayState);
 
   chrome.storage.local.get(configs.reduce((acc, c) => ({ ...acc, [c.key]: c.default }), {}), (res) => {
     configs.forEach(c => {
@@ -1291,11 +1288,19 @@ function loadToolsSettings() {
       if (!el) return;
       if (el.type === 'checkbox') el.checked = res[c.key];
       else el.value = res[c.key];
-      el.onchange = (e) => chrome.storage.local.set({ [c.key]: el.type === 'checkbox' ? e.target.checked : e.target.value });
+      el.onchange = (e) => {
+        if (!el.checkValidity()) {
+          el.reportValidity();
+          return;
+        }
+        const value = el.type === 'number' ? el.valueAsNumber : el.value;
+        chrome.storage.local.set({ [c.key]: el.type === 'checkbox' ? e.target.checked : value });
+      };
     });
 
     // トグルOFF時はサイズセレクトを無効化
     if (sizeSelect) sizeSelect.disabled = !res.miniPlayerEnabled;
+    updateCaretDelayState();
 
     const toggle = document.getElementById('toggleMiniPlayer');
     if (toggle && sizeSelect) {
@@ -1308,6 +1313,15 @@ function loadToolsSettings() {
   // ストレージ変更を監視し、設定UIにリアルタイム反映する（ミニプレイヤーからのサイズ変更対応）
   chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace !== 'local') return;
+
+    if (changes.caretModePosition) {
+      caretPositionSelect.value = changes.caretModePosition.newValue || 'off';
+      updateCaretDelayState();
+    }
+
+    if (changes.caretModeDelay) {
+      document.getElementById('caretModeDelay').value = changes.caretModeDelay.newValue ?? 700;
+    }
 
     if (changes.miniPlayerSize !== undefined) {
       const el = document.getElementById('miniPlayerSize');
@@ -1331,6 +1345,7 @@ function setupFeatures() {
       "・分割表示：タブとブックマークの同時表示、リサイザーによる比率調整",
       "・アドレスバー：URL入力、タブ/ブックマーク/履歴からのサジェスト検索",
       "・ウェブ表示：現在のページをサイドパネル内で表示、メイン画面への移動",
+      "・プレゼンカーソル：スポットライト、レーザー、手書き、ズーム、クリック波紋、入力キー表示",
       "・テーマ切替：ライト / ダーク / システム連動",
       "・誤送信防止：AIチャット等でのEnter送信をガード",
       "・YouTubeミニプレイヤー：スクロール連動のフローティング再生",
@@ -1338,6 +1353,7 @@ function setupFeatures() {
       "・Gemini Canvas拡張：プレビューの全画面表示",
       "・ページテキスト取得：Markdown/HTML形式での抽出とコピー",
       "・クリック要素の採番：キーボード操作による要素選択と実行",
+      "・入力モード表示：直前の入力から推定したモードをキャレットの上下左右に表示",
       "・マウスホイール文字入力：ホバーしてホイール文字入力、中クリックで漢字変換表示"
     ];
     showAlert(list.join("\n\n"), "機能一覧");
