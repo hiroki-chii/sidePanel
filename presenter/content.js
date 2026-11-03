@@ -5,11 +5,6 @@
   const C = PresenterCore;
   let config = C.normalize(), disposed = false;
   const isTop = window === window.top;
-  // The panel can distinguish a loaded document from Chrome's blocked-frame error page.
-  const extensionOrigin = chrome.runtime.getURL('').replace(/\/$/, '');
-  if (!isTop && location.ancestorOrigins[0] === extensionOrigin) {
-    window.parent.postMessage('sidepanel:web-frame-ready', extensionOrigin);
-  }
   // WindowProxy indices identify the embedding element without reading a foreign DOM.
   function relay(input) {
     const path = [];

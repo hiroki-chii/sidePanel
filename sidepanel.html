@@ -55,13 +55,6 @@
         </svg>
       </button>
 
-      <button id="navWeb" class="nav-btn" title="ウェブ表示">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-          <path d="M2 12h20" />
-        </svg>
-      </button>
       <button id="navPresenter" class="nav-btn" title="プレゼンカーソル" aria-label="プレゼンカーソル" aria-controls="presenterPanel">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
           <path d="m4 3 6 17 3-7 7-3z" />
@@ -80,6 +73,11 @@
       </button>
 
       <div class="nav-spacer"></div>
+      <button id="navFullscreen" class="nav-btn" title="全画面表示" aria-label="全画面表示" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+        </svg>
+      </button>
       <button id="navTheme" class="nav-btn" title="テーマ切り替え (ライト/ダーク/システム)">
         <!-- 初期アイコンはシステム (Monitor) -->
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="navThemeIcon">
@@ -246,48 +244,6 @@
 
     <section id="presenterPanel" class="panel" aria-label="プレゼンカーソル"></section>
 
-    <!-- ウェブ表示パネル -->
-    <section id="webPanel" class="panel">
-      <div class="web-panel-header" style="display: flex; gap: 0;">
-        <button id="syncTabBtn" class="action-btn" title="現在のタブを同期" style="margin: 8px; flex: 1;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 17V3" />
-            <path d="m6 11 6 6 6-6" />
-            <path d="M19 21H5" />
-          </svg>
-          <span>現在のページを表示</span>
-        </button>
-        <button id="exportTabBtn" class="action-btn" title="メイン画面で開く"
-          style="margin: 8px; margin-left: 0; flex: 1; background: var(--bg-tertiary); color: var(--text-primary); border-color: var(--border);">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-            <polyline points="15 3 21 3 21 9" />
-            <line x1="10" y1="14" x2="21" y2="3" />
-          </svg>
-          <span>メイン画面へ移動</span>
-        </button>
-      </div>
-      <div class="iframe-container">
-        <!-- 未表示時のUI -->
-        <div id="webEmpty" class="empty-state">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <circle cx="12" cy="12" r="10" />
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-            <path d="M2 12h20" />
-          </svg>
-          <div style="margin-top: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px;">
-            <p>表示したいページをブラウザで開いた状態で、<br><strong>「現在のページを表示」</strong>を押してください。</p>
-          </div>
-        </div>
-
-        <iframe id="webIframe" class="hidden" src="about:blank"
-          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"></iframe>
-        <div id="iframeOverlay" class="iframe-overlay hidden">
-          <p>このページは表示できません</p>
-          <button id="openExternalBtn" class="action-btn">ブラウザで開く</button>
-        </div>
-      </div>
-    </section>
 
     <!-- ページテキスト取得パネル -->
     <section id="summaryPanel" class="panel">

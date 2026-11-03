@@ -17,6 +17,17 @@ const paths = {
 function renderIcons(root = document) {
   root.querySelectorAll('[data-icon]').forEach(node => { node.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[node.dataset.icon] || paths.cursor}</svg>`; });
 }
-const colorScheme = matchMedia('(prefers-color-scheme: light)');
-function applyTheme(theme) { document.documentElement.dataset.theme = theme === 'system' ? (colorScheme.matches ? 'light' : 'dark') : theme; }
+let uiTheme = 'system';
+function applyTheme(theme) {
+  uiTheme = ['light', 'dark'].includes(theme) ? theme : 'system';
+  const root = document.documentElement;
+  root.classList.toggle('light-theme', uiTheme === 'light');
+  root.classList.toggle('dark-theme', uiTheme === 'dark');
+  const select = document.querySelector('#theme');
+  if (select) select.value = uiTheme;
+}
+chrome.storage.local.get('theme').then(saved => applyTheme(saved.theme));
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.theme) applyTheme(changes.theme.newValue);
+});
 renderIcons();

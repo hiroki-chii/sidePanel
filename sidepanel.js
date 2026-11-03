@@ -17,7 +17,7 @@ const _sidePanelPort = chrome.runtime.connect({ name: 'sidepanel' });
 const SYSTEM_PAGE_PATTERN = /^(chrome|edge|about|chrome-extension):/i;
 
 const state = {
-  activeTab: 'tabs', // 'tabs' | 'bookmarks' | 'tools' | 'web' | 'summary' | 'presenter'
+  activeTab: 'tabs', // 'tabs' | 'bookmarks' | 'tools' | 'summary' | 'presenter'
   tabs: [],
   bookmarks: [],
   openFolderIds: new Set(), // ユーザーが展開したブックマークフォルダのID
@@ -52,14 +52,9 @@ const dom = {
   addressSuggestions: document.getElementById('addressSuggestions'),
   newFolderBtn: document.getElementById('newFolderBtn'),
   addressBarContainer: document.getElementById('addressBarContainer'),
-  navWeb: document.getElementById('navWeb'),
+  navFullscreen: document.getElementById('navFullscreen'),
   navPresenter: document.getElementById('navPresenter'),
   presenterPanel: document.getElementById('presenterPanel'),
-  webPanel: document.getElementById('webPanel'),
-  webIframe: document.getElementById('webIframe'),
-  webEmpty: document.getElementById('webEmpty'),
-  syncTabBtn: document.getElementById('syncTabBtn'),
-  exportTabBtn: document.getElementById('exportTabBtn'),
   navSummary: document.getElementById('navSummary'),
   summaryPanel: document.getElementById('summaryPanel'),
 };
@@ -84,7 +79,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupSummaryTool();
   setupCustomModal();
   setupTheme();
-  setupWebView();
+  setupFullscreen();
 
   // 永続化された状態の復元
   await loadAppState();
@@ -94,6 +89,39 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 初期表示の調整
   switchTab(state.activeTab);
 });
+
+/** ブラウザの全画面表示を切り替え、F11などの外部操作にも追従します。 */
+function setupFullscreen() {
+  const button = dom.navFullscreen;
+  if (!button) return;
+  let previousWindowState = 'maximized';
+  const render = win => {
+    const fullscreen = win.state === 'fullscreen';
+    if (['normal', 'maximized'].includes(win.state)) previousWindowState = win.state;
+    button.classList.toggle('active', fullscreen);
+    button.setAttribute('aria-pressed', String(fullscreen));
+    button.title = fullscreen ? '全画面表示を終了' : '全画面表示';
+    button.setAttribute('aria-label', button.title);
+  };
+  const refresh = async () => {
+    try { render(await chrome.windows.getCurrent()); }
+    catch (error) { console.error('Fullscreen status error:', error); }
+  };
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    try {
+      const win = await chrome.windows.getCurrent();
+      render(win);
+      const targetState = win.state === 'fullscreen' ? previousWindowState : 'fullscreen';
+      render(await chrome.windows.update(win.id, { state: targetState }));
+    } catch (error) {
+      console.error('Fullscreen error:', error);
+      showToast('全画面表示を切り替えられませんでした');
+    } finally { button.disabled = false; }
+  });
+  chrome.windows.onBoundsChanged.addListener(refresh);
+  refresh();
+}
 
 // ===========================
 // レイアウト管理 (分割表示)
@@ -341,15 +369,15 @@ function applyTheme() {
 // ===========================
 
 function switchTab(tab) {
+  if (!['tabs', 'bookmarks', 'tools', 'summary', 'presenter'].includes(tab)) tab = 'tabs';
   state.activeTab = tab;
-  state.isSplitView = !['tools', 'web', 'summary', 'presenter'].includes(tab);
+  state.isSplitView = !['tools', 'summary', 'presenter'].includes(tab);
 
   applySplitView();
 
   // ナビゲーションボタンのアクティブ表示更新
   dom.navMain?.classList.toggle('active', state.isSplitView);
   dom.navTools?.classList.toggle('active', tab === 'tools');
-  dom.navWeb?.classList.toggle('active', tab === 'web');
   dom.navPresenter.classList.toggle('active', tab === 'presenter');
   dom.navSummary?.classList.toggle('active', tab === 'summary');
 
@@ -357,7 +385,6 @@ function switchTab(tab) {
   dom.tabsPanel.classList.toggle('active', state.isSplitView);
   dom.bookmarksPanel.classList.toggle('active', state.isSplitView);
   dom.toolsPanel?.classList.toggle('active', tab === 'tools');
-  dom.webPanel?.classList.toggle('active', tab === 'web');
   dom.summaryPanel?.classList.toggle('active', tab === 'summary');
   dom.presenterPanel.classList.toggle('active', tab === 'presenter');
   if (tab === 'presenter' && !dom.presenterPanel.firstElementChild) {
@@ -1367,7 +1394,7 @@ function setupFeatures() {
       "・ブックマーク：ツリー形式での表示、フォルダ管理、D&D並べ替え",
       "・分割表示：タブとブックマークの同時表示、リサイザーによる比率調整",
       "・アドレスバー：URL入力、タブ/ブックマーク/履歴からのサジェスト検索",
-      "・ウェブ表示：現在のページをサイドパネル内で表示、メイン画面への移動",
+      "・全画面表示：ブラウザウィンドウの全画面表示を切り替え",
       "・プレゼンカーソル：スポットライト、レーザー、手書き、ズーム、クリック波紋、入力キー表示",
       "・テーマ切替：ライト / ダーク / システム連動",
       "・誤送信防止：AIチャット等でのEnter送信をガード",
@@ -1598,95 +1625,3 @@ if (typeof marked !== 'undefined') {
 // 共通イベント
 document.getElementById('summaryResultArea')?.addEventListener('input', updateMarkdownPreview);
 setupOutputTabs();
-
-// ===========================
-// ウェブ表示機能
-// ===========================
-
-/** iframeの現在のURLを取得（空の場合はnullを返す） */
-function getIframeUrl() {
-  const url = dom.webIframe?.src;
-  return (url && url !== 'about:blank' && url !== '') ? url : null;
-}
-
-/** iframeのURLをメインブラウザのタブで開く */
-async function openIframeInMainWindow(message) {
-  const url = getIframeUrl();
-  if (url) {
-    await chrome.tabs.create({ url });
-    if (message) showToast(message);
-  } else {
-    showToast('表示中のページがありません');
-  }
-}
-
-/**
- * ウェブ表示パネルのセットアップ
- */
-function setupWebView() {
-  dom.navWeb?.addEventListener('click', () => switchTab('web'));
-  dom.syncTabBtn?.addEventListener('click', () => transferCurrentTabToSidePanel());
-  dom.exportTabBtn?.addEventListener('click', () => openIframeInMainWindow('メイン画面でページを開きました'));
-
-  document.getElementById('openExternalBtn')?.addEventListener('click', openOriginalWebTab);
-}
-
-let originalWebTabId = null;
-async function openOriginalWebTab() {
-  const url = getIframeUrl();
-  if (!url) return;
-  const tab = await chrome.tabs.get(originalWebTabId).catch(() => null);
-  if (tab?.url === url) await chrome.tabs.update(tab.id, { active: true });
-  else await chrome.tabs.create({ url });
-}
-
-let webFrameAttempt;
-/**
- * 現在のタブをサイドパネルに転送
- */
-async function transferCurrentTabToSidePanel() {
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.url) return;
-
-    // セキュリティ制限のあるページは除外
-    if (!/^(https?|file):/i.test(tab.url)) {
-      showToast('このページはサイドパネルで表示できません');
-      return;
-    }
-
-    if (dom.webIframe) {
-      webFrameAttempt?.abort();
-      webFrameAttempt = new AbortController();
-      const { signal } = webFrameAttempt;
-      const overlay = document.getElementById('iframeOverlay');
-      const frame = dom.webIframe.cloneNode(false);
-      originalWebTabId = tab.id;
-      overlay.classList.add('hidden');
-      let timeout;
-      signal.addEventListener('abort', () => clearTimeout(timeout), { once: true });
-      window.addEventListener('message', event => {
-        if (event.source === frame.contentWindow && event.data === 'sidepanel:web-frame-ready') {
-          webFrameAttempt.abort();
-        }
-      }, { signal });
-      // Chrome fires load even for a refused embed. Only an actual site document can acknowledge it.
-      frame.addEventListener('load', () => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => {
-          webFrameAttempt.abort();
-          overlay.classList.remove('hidden');
-          showToast('パネルに表示できません。通常のタブでご覧ください');
-        }, 2000);
-      }, { signal });
-      frame.src = tab.url;
-      frame.classList.remove('hidden');
-      dom.webIframe.replaceWith(frame);
-      dom.webIframe = frame;
-      dom.webEmpty?.classList.add('hidden');
-    }
-  } catch (error) {
-    console.error('Transfer error:', error);
-    showToast('転送に失敗しました');
-  }
-}

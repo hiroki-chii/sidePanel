@@ -5,7 +5,6 @@ const modeFor = { toggleSpotlight: 'spotlight', toggleAreaSpotlight: 'area', tog
 const message = document.querySelector('#message'), status = document.querySelector('#status'), power = document.querySelector('#power');
 function notify(text, error = false) { message.textContent = text; message.hidden = !text; message.classList.toggle('error', error); }
 function render() {
-  applyTheme(config.theme);
   power.setAttribute('aria-pressed', String(config.enabled)); power.setAttribute('aria-label', config.enabled ? '全機能をOFF' : '機能を有効にする'); power.title = power.getAttribute('aria-label');
   status.textContent = unavailable ? '利用できません' : config.enabled ? '使用可能' : 'すべてOFF'; status.classList.toggle('off', unavailable || !config.enabled);
   for (const button of document.querySelectorAll('[data-action]')) {
@@ -14,8 +13,7 @@ function render() {
     if (modeFor[action]) {
       button.setAttribute('aria-pressed', String(!!current?.[modeFor[action]]));
       button.querySelector('.key').textContent = `Ctrl + Shift + ${config.shortcuts[action]}`;
-    } else if (action === 'redoDrawing') button.disabled ||= !current?.redoCount;
-    else button.disabled ||= !current?.strokeCount;
+    }
   }
   for (const button of document.querySelectorAll('[data-setting]')) {
     const [section, key] = button.dataset.setting.split('.'); button.setAttribute('aria-checked', String(config[section][key])); button.disabled = !config.enabled || busy;
@@ -79,7 +77,6 @@ async function refresh() {
   render();
 }
 chrome.storage.onChanged.addListener(changes => { if (changes.config) { config = PresenterCore.normalize(changes.config.newValue); render(); } });
-colorScheme.addEventListener('change', () => applyTheme(config.theme));
 (async () => {
   windowId = (await chrome.windows.getCurrent()).id;
   chrome.tabs.onActivated.addListener(info => { if (info.windowId === windowId) refresh(); });

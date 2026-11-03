@@ -24,7 +24,7 @@ for (const [action, title] of Object.entries(PresenterCore.labels)) {
 }
 function reportError(text) { const message = document.querySelector('#settings-message'); message.textContent = text; message.hidden = !text; }
 function render() {
-  applyTheme(config.theme); document.querySelector('#theme').value = config.theme;
+  applyTheme(uiTheme);
   const power = document.querySelector('#power'); power.setAttribute('aria-pressed', String(config.enabled)); power.setAttribute('aria-label', config.enabled ? '全機能をOFF' : '機能を有効にする'); power.title = power.getAttribute('aria-label');
   const status = document.querySelector('#status'); status.textContent = config.enabled ? '使用可能' : 'すべてOFF'; status.classList.toggle('off', !config.enabled);
   for (const node of document.querySelectorAll('[data-field]')) {
@@ -50,7 +50,10 @@ document.querySelectorAll('[data-field]').forEach(node => node.addEventListener(
   save(c => { c[section][key] = value; });
 }));
 document.querySelectorAll('[data-setting]').forEach(node => node.addEventListener('click', () => { const [section, key] = node.dataset.setting.split('.'); save(c => { c[section][key] = !c[section][key]; }); }));
-document.querySelector('#theme').addEventListener('change', event => { const value = event.target.value; save(c => { c.theme = value; }); });
+document.querySelector('#theme').addEventListener('change', async event => {
+  try { await chrome.storage.local.set({ theme: event.target.value }); reportError(''); }
+  catch (error) { reportError(error.message); applyTheme(uiTheme); }
+});
 document.querySelector('#power').addEventListener('click', () => save(c => { c.enabled = !c.enabled; }));
 document.querySelector('#chrome-shortcuts').addEventListener('click', () => chrome.tabs.create({ url: 'chrome://extensions/shortcuts' }));
 document.querySelectorAll('[data-tab]').forEach(button => button.addEventListener('click', () => selectPanel(button.dataset.tab)));
@@ -68,5 +71,4 @@ document.querySelector('#reset-apply').addEventListener('click', async () => {
   document.querySelector('#reset-confirm').hidden = true;
 });
 chrome.storage.onChanged.addListener(changes => { if (changes.config) { config = PresenterCore.normalize(changes.config.newValue); render(); } });
-colorScheme.addEventListener('change', () => applyTheme(config.theme));
 (async () => { const saved = await chrome.storage.local.get('config'); config = PresenterCore.normalize(saved.config); render(); selectPanel(location.hash.slice(1)); })();
